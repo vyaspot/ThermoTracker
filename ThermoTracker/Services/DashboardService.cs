@@ -67,9 +67,7 @@ public class DashboardService(
                 data.SmoothedValue = _sensorService.SmoothData(recentData);
                 data.IsAnomaly = _sensorService.DetectAnomaly(data, recentData);
 
-                // Store and log data
                 await _dataService.StoreDataAsync(data);
-                //await _dataService.LogDataAsync(data);
 
                 // Update history
                 _dataHistory[sensor.Name].Add(data);
@@ -135,6 +133,9 @@ public class DashboardService(
 
             if (latestData == null) continue;
 
+            var temperatureDisplay = $"{latestData.Temperature:F2}°C";
+            var smoothedDisplay = $"{latestData.SmoothedValue:F2}°C";
+
             var tempColor = GetTemperatureStyle(latestData.Temperature);
             var status = latestData.IsValid ?
                 new Markup("[green] VALID[/]") :
@@ -154,9 +155,9 @@ public class DashboardService(
             table.AddRow(
                 new Markup($"{sensor.Name}"),
                 new Markup($"{sensor.Location}"),
-                new Markup($"[{tempColor}]{latestData.Temperature}°C[/]"),
+                new Markup($"[{tempColor}]{temperatureDisplay}[/]"),
                 status,
-                new Markup($"[cyan]{latestData.SmoothedValue}°C[/]"),
+                new Markup($"[cyan]{smoothedDisplay}[/]"),
                 alertText
             );
         }
@@ -225,7 +226,6 @@ public class DashboardService(
     {
         try
         {
-            // Now this method should be available
             var loggingInfo = _dataService.GetFileLoggingInfoAsync().GetAwaiter().GetResult();
             var currentLogPath = loggingInfo.CurrentLogFilePath;
             var fileSize = loggingInfo.CurrentLogFileSizeBytes;

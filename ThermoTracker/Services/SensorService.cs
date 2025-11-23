@@ -70,11 +70,22 @@ public class SensorService(
         }
         else if (_random.NextDouble() < (double)sensor.SpikeProbability)
         {
-            // Simulate temperature spike within decimal(5,2) bounds
+            // Simulate temperature spike within decimal(5,2) bounds WITH PROPER ROUNDING
             var spikeMagnitude = (decimal)(_random.NextDouble() * 10.0);
-            temperature = _random.NextDouble() > 0.5 ?
-                Math.Min(sensor.MaxValue + spikeMagnitude, 999.99M) : // Hot spike
-                Math.Max(sensor.MinValue - spikeMagnitude, -99.99M);  // Cold spike
+
+            if (_random.NextDouble() > 0.5)
+            {
+                // Hot spike - ensure it doesn't exceed 999.99 and is properly rounded
+                temperature = Math.Min(sensor.MaxValue + 5.0M + spikeMagnitude, 999.99M);
+            }
+            else
+            {
+                // Cold spike - ensure it doesn't go below -99.99 and is properly rounded
+                temperature = Math.Max(sensor.MinValue - 5.0M - spikeMagnitude, -99.99M);
+            }
+
+            // CRITICAL FIX: Round the spike temperature to 2 decimal places
+            temperature = Math.Round(temperature, 2);
 
             isSpike = true;
             alertType = AlertType.Spike;
@@ -144,10 +155,19 @@ public class SensorService(
         if (data.IsFaulty || data.IsSpike)
             return false;
 
-        // validation: Fixed 22-24°C range
+        // Additional validation: Ensure temperature is properly formatted with 2 decimal places
+        var roundedTemperature = Math.Round(data.Temperature, 2);
+        if (roundedTemperature != data.Temperature)
+        {
+            _logger.LogWarning("Temperature value {Temperature} is not properly rounded to 2 decimal places for sensor {SensorName}",
+                data.Temperature, data.SensorName);
+            return false;
+        }
+
+        // Primary validation: Fixed 22-24°C range from configuration
         bool isValidByFixedRange = data.Temperature >= _fixedRange.Min && data.Temperature <= _fixedRange.Max;
 
-        // validation: Sensor-specific range
+        // Secondary validation: Sensor-specific range
         bool isValidBySensorRange = data.Temperature >= sensor.MinValue && data.Temperature <= sensor.MaxValue;
 
         // Use fixed range as primary if configured, otherwise use sensor range

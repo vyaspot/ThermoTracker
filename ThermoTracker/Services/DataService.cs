@@ -25,11 +25,13 @@ public class DataService(
     {
         try
         {
-            // Store to database
+            data.Temperature = Math.Round(data.Temperature, 2);
+            data.SmoothedValue = Math.Round(data.SmoothedValue, 2);
+
             _context.SensorData.Add(data);
             await _context.SaveChangesAsync();
 
-            // Log to file system - ensure this is awaited
+            // Log to file system
             await _fileLoggingService.LogSensorReadingAsync(data);
 
             _logger.LogDebug("Successfully stored and logged data for sensor {SensorName}", data.SensorName);
