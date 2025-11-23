@@ -38,7 +38,7 @@ try
 
 
     // Dashboard as hosted service
-
+    builder.Services.AddHostedService<DashboardService>();
 
 
     // Logging
