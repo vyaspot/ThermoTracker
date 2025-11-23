@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 874521d (Merge pull request #10 from vyaspot/feat_8)
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,14 +20,9 @@ try
         .AddEnvironmentVariables();
 
     // Services
-<<<<<<< HEAD
-    builder.Services.AddScoped<IDataService, DataService>();
-    builder.Services.AddScoped<ISensorValidatorService, SensorValidatorService>();
-=======
     builder.Services.AddSingleton<ISensorValidatorService, SensorValidatorService>();
     builder.Services.AddScoped<IDataService, DataService>();
     builder.Services.AddScoped<ISensorService, SensorService>();
->>>>>>> 874521d (Merge pull request #10 from vyaspot/feat_8)
 
 
     // Configuration sections
@@ -89,12 +80,4 @@ catch (Exception ex)
     Console.WriteLine($"Application failed to start: {ex.Message}");
     Console.WriteLine("Press any key to exit...");
     Console.ReadKey();
-<<<<<<< HEAD
 }
-=======
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
->>>>>>> c9fe9ce (Project Init)
-=======
-}
->>>>>>> 874521d (Merge pull request #10 from vyaspot/feat_8)
