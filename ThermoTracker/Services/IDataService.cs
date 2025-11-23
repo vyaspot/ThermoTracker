@@ -15,4 +15,6 @@ public interface IDataService
     Task<OverallStatistics> GetOverallStatisticsAsync(TimeSpan duration);
     Task<List<SensorAlert>> GetRecentAlertsAsync(int count);
     Task<List<SensorData>> GetFaultyReadingsAsync(TimeSpan duration);
+    Task<FileLoggingInfo> GetFileLoggingInfoAsync();
+    Task CleanupLogsAsync();
 }
