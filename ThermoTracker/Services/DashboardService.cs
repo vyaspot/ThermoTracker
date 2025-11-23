@@ -75,7 +75,7 @@ public class DashboardService : IHostedService
 
                 // Store and log data
                 await _dataService.StoreDataAsync(data);
-                await _dataService.LogDataAsync(data);
+                //await _dataService.LogDataAsync(data);
 
                 // Update history
                 _dataHistory[sensor.Name].Add(data);
