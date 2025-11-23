@@ -48,26 +48,26 @@ try
     var host = builder.Build();
 
     // Initialize database
-    // using (var scope = host.Services.CreateScope())
-    // {
-    //     var services = scope.ServiceProvider;
-    //     try
-    //     {
-    //         var context = services.GetRequiredService<SensorDbContext>();
-    //         await context.Database.EnsureCreatedAsync();
+    using (var scope = host.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        try
+        {
+            var context = services.GetRequiredService<SensorDbContext>();
+            await context.Database.EnsureCreatedAsync();
 
-    //         var logger = services.GetRequiredService<ILogger<Program>>();
-    //         logger.LogInformation("Database initialized successfully at {Time}", DateTime.UtcNow);
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Database initialized successfully at {Time}", DateTime.UtcNow);
 
 
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         var logger = services.GetRequiredService<ILogger<Program>>();
-    //         logger.LogError(ex, "An error occurred while initializing the database");
-    //         throw;
-    //     }
-    // }
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while initializing the database");
+            throw;
+        }
+    }
 
     await host.RunAsync();
 }
