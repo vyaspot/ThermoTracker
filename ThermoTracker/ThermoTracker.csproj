@@ -8,6 +8,9 @@
   </PropertyGroup>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 874521d (Merge pull request #10 from vyaspot/feat_8)
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
@@ -20,6 +23,9 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
+<<<<<<< HEAD
 =======
 >>>>>>> c9fe9ce (Project Init)
+=======
+>>>>>>> 874521d (Merge pull request #10 from vyaspot/feat_8)
 </Project>
