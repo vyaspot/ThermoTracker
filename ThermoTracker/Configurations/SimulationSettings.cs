@@ -1,6 +1,6 @@
 namespace ThermoTracker.ThermoTracker.Configurations;
 
-public class SimulationConfig
+public class SimulationSettings
 {
     public int UpdateIntervalMs { get; set; }
     public int DataHistorySize { get; set; }

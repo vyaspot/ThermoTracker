@@ -1,6 +1,6 @@
 namespace ThermoTracker.ThermoTracker.Configurations;
 
-public class TemperatureRangeConfig
+public class TemperatureRangeSettings
 {
     public decimal Min { get; set; } = 22.0M;
     public decimal Max { get; set; } = 24.0M;

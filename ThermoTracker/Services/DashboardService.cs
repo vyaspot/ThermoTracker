@@ -16,14 +16,14 @@ public class DashboardService : IHostedService
     private Timer? _timer;
     private List<Sensor> _sensors = [];
     private readonly Dictionary<string, List<SensorData>> _dataHistory = [];
-    private readonly SimulationConfig _simulationSettings;
-    private readonly TemperatureRangeConfig _fixedRange;
+    private readonly SimulationSettings _simulationSettings;
+    private readonly TemperatureRangeSettings _fixedRange;
 
     public DashboardService(
         ISensorService sensorService,
         IDataService dataService,
-        IOptions<SimulationConfig> simulationOptions,
-        IOptions<TemperatureRangeConfig> fixedRangeOptions,
+        IOptions<SimulationSettings> simulationOptions,
+        IOptions<TemperatureRangeSettings> fixedRangeOptions,
         ILogger<DashboardService> logger)
     {
         _sensorService = sensorService;

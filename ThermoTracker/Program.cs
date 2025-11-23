@@ -26,8 +26,8 @@ try
 
 
     // Configuration sections
-    builder.Services.Configure<SimulationConfig>(builder.Configuration.GetSection("SimulationConfig"));
-    builder.Services.Configure<TemperatureRangeConfig>(builder.Configuration.GetSection("TemperatureRangeConfig"));
+    builder.Services.Configure<SimulationSettings>(builder.Configuration.GetSection("SimulationConfig"));
+    builder.Services.Configure<TemperatureRangeSettings>(builder.Configuration.GetSection("TemperatureRangeConfig"));
 
 
     // Database

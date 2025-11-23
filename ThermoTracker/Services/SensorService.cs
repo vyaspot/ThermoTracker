@@ -9,12 +9,12 @@ namespace ThermoTracker.ThermoTracker.Services;
 public class SensorService(
     ISensorValidatorService validator,
     ILogger<SensorService> logger,
-    IOptions<TemperatureRangeConfig> fixedRangeOptions) : ISensorService
+    IOptions<TemperatureRangeSettings> fixedRangeOptions) : ISensorService
 {
     private readonly Random _random = new();
     private readonly ISensorValidatorService _validatorService = validator;
     private readonly ILogger<SensorService> _logger = logger;
-    private readonly TemperatureRangeConfig _fixedRange = fixedRangeOptions.Value;
+    private readonly TemperatureRangeSettings _fixedRange = fixedRangeOptions.Value;
 
     public List<Sensor> InitializeSensors()
     {
