@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ThermoTracker.ThermoTracker.Data;
+using ThermoTracker.ThermoTracker.Services;
 
 
 
@@ -18,7 +19,7 @@ try
         .AddEnvironmentVariables();
 
     // Services
-
+    builder.Services.AddScoped<IDataService, DataService>();
 
 
     // Configuration sections
