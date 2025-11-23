@@ -20,8 +20,9 @@ try
         .AddEnvironmentVariables();
 
     // Services
+    builder.Services.AddSingleton<ISensorValidatorService, SensorValidatorService>();
     builder.Services.AddScoped<IDataService, DataService>();
-    builder.Services.AddScoped<ISensorValidatorService, SensorValidatorService>();
+    builder.Services.AddScoped<ISensorService, SensorService>();
 
 
     // Configuration sections

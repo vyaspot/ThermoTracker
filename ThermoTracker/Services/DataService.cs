@@ -102,7 +102,6 @@ public class DataService : IDataService
         return count;
     }
 
-    // New enhanced methods
     public async Task<SensorStatistics> GetSensorStatisticsAsync(string sensorName, TimeSpan duration)
     {
         var startTime = DateTime.UtcNow - duration;
