@@ -1,3 +1,5 @@
+using ThermoTracker.ThermoTracker.Enums;
+
 namespace ThermoTracker.ThermoTracker.Models;
 
 public class SensorAlert
@@ -6,6 +8,6 @@ public class SensorAlert
     public string Location { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public decimal Temperature { get; set; }
-    public string AlertType { get; set; } = string.Empty;
+    public AlertType AlertType { get; set; } = AlertType.None;
     public string Message { get; set; } = string.Empty;
 }
