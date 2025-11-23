@@ -6,41 +6,34 @@ using ThermoTracker.ThermoTracker.Models;
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class SensorService : ISensorService
+public class SensorService(
+    ISensorValidatorService validator,
+    ILogger<SensorService> logger,
+    IOptions<TemperatureRangeConfig> fixedRangeOptions) : ISensorService
 {
     private readonly Random _random = new();
-    private readonly ISensorValidatorService _validatorService;
-    private readonly ILogger<SensorService> _logger;
-    private readonly TemperatureRangeConfig _fixedRange;
-
-    public SensorService(
-        ISensorValidatorService validator,
-        ILogger<SensorService> logger,
-        IOptions<TemperatureRangeConfig> fixedRangeOptions)
-    {
-        _validatorService = validator;
-        _logger = logger;
-        _fixedRange = fixedRangeOptions.Value;
-    }
+    private readonly ISensorValidatorService _validatorService = validator;
+    private readonly ILogger<SensorService> _logger = logger;
+    private readonly TemperatureRangeConfig _fixedRange = fixedRangeOptions.Value;
 
     public List<Sensor> InitializeSensors()
     {
         var validSensors = _validatorService.GetRules();
         var sensors = new List<Sensor>();
 
-        foreach (var config in validSensors)
+        foreach (var validSensor in validSensors)
         {
             var sensor = new Sensor
             {
-                Name = config.Name,
-                Location = config.Location,
-                MinValue = config.MinValue,
-                MaxValue = config.MaxValue,
-                NormalMin = config.NormalMin,
-                NormalMax = config.NormalMax,
-                NoiseRange = config.NoiseRange,
-                FaultProbability = config.FaultProbability,
-                SpikeProbability = config.SpikeProbability,
+                Name = validSensor.Name,
+                Location = validSensor.Location,
+                MinValue = validSensor.MinValue,
+                MaxValue = validSensor.MaxValue,
+                NormalMin = validSensor.NormalMin,
+                NormalMax = validSensor.NormalMax,
+                NoiseRange = validSensor.NoiseRange,
+                FaultProbability = validSensor.FaultProbability,
+                SpikeProbability = validSensor.SpikeProbability,
                 IsFaulty = false,
                 CreatedAt = DateTime.UtcNow
             };
