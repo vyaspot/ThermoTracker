@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ThermoTracker.Tests/ThermoTracker.Tests.csproj" />
+  <Project Path="ThermoTracker/ThermoTracker.csproj" />
+</Solution>
