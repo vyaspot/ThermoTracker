@@ -36,7 +36,10 @@ bld/
 [Ll]ogs/
 obj
 bin
+<<<<<<< HEAD
 Migrations
+=======
+>>>>>>> c9fe9ce (Project Init)
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
