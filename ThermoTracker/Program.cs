@@ -23,11 +23,13 @@ try
     builder.Services.AddSingleton<ISensorValidatorService, SensorValidatorService>();
     builder.Services.AddScoped<IDataService, DataService>();
     builder.Services.AddScoped<ISensorService, SensorService>();
+    builder.Services.AddScoped<IFileLoggingService, FileLoggingService>();
 
 
     // Configuration sections
     builder.Services.Configure<SimulationSettings>(builder.Configuration.GetSection("SimulationConfig"));
     builder.Services.Configure<TemperatureRangeSettings>(builder.Configuration.GetSection("TemperatureRangeConfig"));
+    builder.Services.Configure<FileLoggingSettings>(builder.Configuration.GetSection("FileLoggingConfig"));
 
 
     // Database

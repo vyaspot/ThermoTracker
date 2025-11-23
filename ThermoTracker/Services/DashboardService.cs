@@ -8,30 +8,24 @@ using ThermoTracker.ThermoTracker.Models;
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class DashboardService : IHostedService
+public class DashboardService(
+    ISensorService sensorService,
+    IDataService dataService,
+    IOptions<FileLoggingSettings> fileLoggingOptions,
+    IOptions<SimulationSettings> simulationOptions,
+    IOptions<TemperatureRangeSettings> fixedRangeOptions,
+    ILogger<DashboardService> logger) : IHostedService
 {
-    private readonly ISensorService _sensorService;
-    private readonly IDataService _dataService;
-    private readonly ILogger<DashboardService> _logger;
+    private readonly ISensorService _sensorService = sensorService;
+    private readonly IDataService _dataService = dataService;
+    private readonly ILogger<DashboardService> _logger = logger;
     private Timer? _timer;
     private List<Sensor> _sensors = [];
     private readonly Dictionary<string, List<SensorData>> _dataHistory = [];
-    private readonly SimulationSettings _simulationSettings;
-    private readonly TemperatureRangeSettings _fixedRange;
+    private readonly SimulationSettings _simulationSettings = simulationOptions.Value;
+    private readonly TemperatureRangeSettings _fixedRange = fixedRangeOptions.Value;
+    private readonly FileLoggingSettings _fileLoggingSettings = fileLoggingOptions.Value;
 
-    public DashboardService(
-        ISensorService sensorService,
-        IDataService dataService,
-        IOptions<SimulationSettings> simulationOptions,
-        IOptions<TemperatureRangeSettings> fixedRangeOptions,
-        ILogger<DashboardService> logger)
-    {
-        _sensorService = sensorService;
-        _dataService = dataService;
-        _logger = logger;
-        _simulationSettings = simulationOptions.Value;
-        _fixedRange = fixedRangeOptions.Value;
-    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -110,6 +104,11 @@ public class DashboardService : IHostedService
         // Statistics
         var statsPanel = CreateStatisticsPanel();
         AnsiConsole.Write(statsPanel);
+        AnsiConsole.WriteLine();
+
+        // File Logging Status
+        var fileLoggingPanel = CreateFileLoggingPanel();
+        AnsiConsole.Write(fileLoggingPanel);
         AnsiConsole.WriteLine();
 
         // Footer
@@ -220,5 +219,62 @@ public class DashboardService : IHostedService
         _timer?.Dispose();
         _logger.LogInformation("Dashboard service stopped");
         return Task.CompletedTask;
+    }
+
+    private Panel CreateFileLoggingPanel()
+    {
+        try
+        {
+            // Now this method should be available
+            var loggingInfo = _dataService.GetFileLoggingInfoAsync().GetAwaiter().GetResult();
+            var currentLogPath = loggingInfo.CurrentLogFilePath;
+            var fileSize = loggingInfo.CurrentLogFileSizeBytes;
+            var entryCount = loggingInfo.CurrentFileEntryCount;
+
+            var grid = new Grid();
+            grid.AddColumn();
+            grid.AddColumn();
+
+            grid.AddRow(
+                new Markup($"[blue]Current File: {Path.GetFileName(currentLogPath)}[/]"),
+                new Markup($"[green]Size: {(fileSize / 1024.0):F1} KB[/]")
+            );
+
+            grid.AddRow(
+                new Markup($"[yellow]Entries: {entryCount} records[/]"),
+                new Markup($"[grey]Total Files: {loggingInfo.TotalLogFiles}[/]")
+            );
+
+            grid.AddRow(
+                new Markup($"[cyan]Directory: {_fileLoggingSettings.LogDirectory}[/]"),
+                new Markup($"[orange1]Status: {(entryCount > 0 ? "ACTIVE" : "NO DATA")}[/]")
+            );
+
+            var statusColor = entryCount > 0 ? Color.Green : Color.Red;
+            var statusText = entryCount > 0 ? "Logging Active" : "No Data Written";
+
+            return new Panel(grid)
+            {
+                Header = new PanelHeader($"[white]📁 File Logging Status: {statusText}[/]"),
+                Border = BoxBorder.Rounded,
+                BorderStyle = new Style(statusColor)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get file logging info for dashboard");
+
+            // Return error panel
+            var errorGrid = new Grid();
+            errorGrid.AddColumn();
+            errorGrid.AddRow(new Markup($"[red]Error getting file logging status: {ex.Message}[/]"));
+
+            return new Panel(errorGrid)
+            {
+                Header = new PanelHeader("📁 File Logging Status"),
+                Border = BoxBorder.Rounded,
+                BorderStyle = new Style(Color.Red)
+            };
+        }
     }
 }

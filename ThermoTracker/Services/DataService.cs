@@ -3,27 +3,36 @@ using ThermoTracker.ThermoTracker.Data;
 using ThermoTracker.ThermoTracker.Models;
 using Microsoft.EntityFrameworkCore;
 using ThermoTracker.ThermoTracker.Enums;
+using ThermoTracker.ThermoTracker.Configurations;
+using Microsoft.Extensions.Options;
 
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class DataService : IDataService
+public class DataService(
+    SensorDbContext context,
+    IFileLoggingService fileLoggingService,
+    IOptions<FileLoggingSettings> fileLoggingSettings,
+    ILogger<DataService> logger) : IDataService
 {
-    private readonly SensorDbContext _context;
-    private readonly ILogger<DataService> _logger;
+    private readonly SensorDbContext _context = context;
+    private readonly ILogger<DataService> _logger = logger;
+    private readonly IFileLoggingService _fileLoggingService = fileLoggingService;
+    private readonly FileLoggingSettings _fileLoggingSettings = fileLoggingSettings.Value;
 
-    public DataService(SensorDbContext context, ILogger<DataService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
 
     public async Task StoreDataAsync(SensorData data)
     {
         try
         {
+            // Store to database
             _context.SensorData.Add(data);
             await _context.SaveChangesAsync();
+
+            // Log to file system - ensure this is awaited
+            await _fileLoggingService.LogSensorReadingAsync(data);
+
+            _logger.LogDebug("Successfully stored and logged data for sensor {SensorName}", data.SensorName);
         }
         catch (Exception ex)
         {
@@ -169,4 +178,24 @@ public class DataService : IDataService
             .OrderByDescending(d => d.Timestamp)
             .ToListAsync();
     }
+
+    public async Task<FileLoggingInfo> GetFileLoggingInfoAsync()
+    {
+        var currentPath = await _fileLoggingService.GetCurrentLogFilePathAsync();
+        var fileSize = await _fileLoggingService.GetCurrentLogFileSizeAsync();
+        var entryCount = await _fileLoggingService.GetCurrentLogFileEntryCountAsync();
+        var logFiles = await _fileLoggingService.GetLogFilesAsync();
+
+        return new FileLoggingInfo
+        {
+            CurrentLogFilePath = currentPath,
+            CurrentLogFileSizeBytes = fileSize,
+            TotalLogFiles = logFiles.Count(),
+            LogFiles = logFiles.ToList(),
+            CurrentFileEntryCount = entryCount,
+            Format = _fileLoggingSettings.UseHumanReadableFormat ? "Human Readable" : "Tab-Separated"
+        };
+    }
+
+    public async Task CleanupLogsAsync() => await _fileLoggingService.CleanOldLogFilesAsync();
 }
