@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ThermoTracker.ThermoTracker.Configurations;
 using ThermoTracker.ThermoTracker.Data;
 using ThermoTracker.ThermoTracker.Services;
 
@@ -20,10 +21,12 @@ try
 
     // Services
     builder.Services.AddScoped<IDataService, DataService>();
+    builder.Services.AddScoped<ISensorValidatorService, SensorValidatorService>();
 
 
     // Configuration sections
-
+    builder.Services.Configure<SimulationConfig>(builder.Configuration.GetSection("SimulationConfig"));
+    builder.Services.Configure<TemperatureRangeConfig>(builder.Configuration.GetSection("TemperatureRangeConfig"));
 
 
     // Database
