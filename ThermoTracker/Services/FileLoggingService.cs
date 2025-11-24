@@ -14,6 +14,14 @@ public class FileLoggingService : IFileLoggingService, IDisposable
     private readonly object _fileLock = new();
     private string _currentLogFilePath;
 
+    // Column width: consistent formatting
+    private const int TimestampWidth = 19;
+    private const int SensorNameWidth = 25;
+    private const int LocationWidth = 16;
+    private const int TemperatureWidth = 11;
+    private const int StatusWidth = 8;
+    private const int AlertTypeWidth = 11;
+
     public FileLoggingService(IOptions<FileLoggingSettings> settings, ILogger<FileLoggingService> logger)
     {
         _settings = settings.Value;
@@ -50,8 +58,8 @@ public class FileLoggingService : IFileLoggingService, IDisposable
 
         if (_settings.UseHumanReadableFormat)
         {
-            // Perfectly aligned header with exact column widths
-            header = "Timestamp           | Sensor Name           | Location         | Temperature | Status  | Alert Type";
+            // Updated header with increased sensor name width
+            header = "Timestamp           | Sensor Name                 | Location         | Temperature | Status   | Alert Type";
         }
         else
         {
@@ -65,8 +73,8 @@ public class FileLoggingService : IFileLoggingService, IDisposable
 
             if (_settings.UseHumanReadableFormat)
             {
-                // Separator line matching the header length
-                writer.WriteLine(new string('-', 105));
+                // Updated separator line to match new width (110 characters)
+                writer.WriteLine(new string('-', 110));
             }
         }
     }
@@ -114,17 +122,16 @@ public class FileLoggingService : IFileLoggingService, IDisposable
 
     private string FormatHumanReadableEntry(SensorData data)
     {
-        // Format timestamp without milliseconds - fixed 19 characters
         var timestamp = data.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
 
-        // Fixed column widths for perfect alignment
-        var sensorName = PadField(data.SensorName, 20);        // 20 chars
-        var location = PadField(data.SensorLocation, 16);      // 16 chars
-        var temperature = PadField($"{data.Temperature:0.00}°C", 11); // 11 chars (e.g., "  23.45°C")
-        var status = PadField(GetStatusDisplay(data), 8);      // 8 chars
-        var alertType = PadField(GetAlertTypeDisplay(data.AlertType), 11); // 11 chars
+        // Updated column widths with increased sensor name width
+        var sensorName = PadField(data.SensorName, SensorNameWidth);
+        var location = PadField(data.SensorLocation, LocationWidth);
+        var temperature = PadField($"{data.Temperature:0.00}°C", TemperatureWidth);
+        var status = PadField(GetStatusDisplay(data), StatusWidth);
+        var alertType = PadField(GetAlertTypeDisplay(data.AlertType), AlertTypeWidth);
 
-        return $"{timestamp} | {sensorName} | {location} | {temperature} | {status} | {alertType}";
+        return $"{timestamp} | {sensorName}   | {location} | {temperature} | {status} | {alertType}";
     }
 
     private string FormatTabSeparatedEntry(SensorData data)
