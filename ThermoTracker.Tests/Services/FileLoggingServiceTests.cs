@@ -56,14 +56,14 @@ public class FileLoggingServiceTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_ShouldWriteHeader_WhenIncludeHeaderIsTrue()
+    public async Task Constructor_ShouldWriteHeader_WhenIncludeHeaderIsTrue()
     {
         // Arrange
         _testSettings.IncludeHeader = true;
 
         // Act
         var service = CreateFileLoggingService();
-        var filePath = service.GetCurrentLogFilePathAsync().GetAwaiter().GetResult();
+        var filePath = await service.GetCurrentLogFilePathAsync();
 
         // Assert
         var lines = File.ReadAllLines(filePath);
