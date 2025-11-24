@@ -27,3 +27,6 @@ This .NET console application simulates the behavior of temperature sensors with
 ### Prerequisites
 - .NET 10.0 SDK
 - Git
+
+
+<!-- For the test report dotnet test --collect:"XPlat Code Coverage" --results-directory "."" -->

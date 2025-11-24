@@ -235,7 +235,7 @@ public class FileLoggingService : IFileLoggingService, IDisposable
         await CleanOldLogFilesAsync();
     }
 
-    private string GetCurrentLogFilePath()
+    public string GetCurrentLogFilePath()
     {
         var fileName = _settings.LogFileName.Replace("{date}", DateTime.Now.ToString("yyyyMMdd"));
         return Path.Combine(_settings.LogDirectory, fileName);
