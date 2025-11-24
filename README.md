@@ -29,4 +29,4 @@ This .NET console application simulates the behavior of temperature sensors with
 - Git
 
 
-<!-- For the test report dotnet test --collect:"XPlat Code Coverage" -->
+<!-- For the test report dotnet test --collect:"XPlat Code Coverage" --results-directory "."" -->
