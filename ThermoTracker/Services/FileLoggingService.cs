@@ -20,7 +20,6 @@ public class FileLoggingService : IFileLoggingService, IDisposable
         _logger = logger;
         _currentLogFilePath = GetCurrentLogFilePath();
 
-        // Ensure log directory exists
         Directory.CreateDirectory(_settings.LogDirectory);
         InitializeLogFile();
 
@@ -51,11 +50,12 @@ public class FileLoggingService : IFileLoggingService, IDisposable
 
         if (_settings.UseHumanReadableFormat)
         {
-            header = "Timestamp           | Sensor Name           | Location         | Temperature | Smoothed | Status  | Alert Type | Quality | Notes";
+            // Perfectly aligned header with exact column widths
+            header = "Timestamp           | Sensor Name           | Location         | Temperature | Status  | Alert Type";
         }
         else
         {
-            header = "Timestamp\tSensorName\tLocation\tTemperature\tSmoothedValue\tIsValid\tIsAnomaly\tIsSpike\tIsFaulty\tAlertType\tQualityScore\tNotes";
+            header = "Timestamp\tSensorName\tLocation\tTemperature\tStatus\tAlertType";
         }
 
         lock (_fileLock)
@@ -65,7 +65,8 @@ public class FileLoggingService : IFileLoggingService, IDisposable
 
             if (_settings.UseHumanReadableFormat)
             {
-                writer.WriteLine(new string('-', 120));
+                // Separator line matching the header length
+                writer.WriteLine(new string('-', 105));
             }
         }
     }
@@ -74,7 +75,6 @@ public class FileLoggingService : IFileLoggingService, IDisposable
     {
         try
         {
-            // Check if we need to rotate to a new day's file
             var newFilePath = GetCurrentLogFilePath();
             if (newFilePath != _currentLogFilePath)
             {
@@ -114,42 +114,31 @@ public class FileLoggingService : IFileLoggingService, IDisposable
 
     private string FormatHumanReadableEntry(SensorData data)
     {
-        // Format timestamp without milliseconds
-        var timestamp = data.Timestamp.ToString(_settings.TimestampFormat);
+        // Format timestamp without milliseconds - fixed 19 characters
+        var timestamp = data.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
 
-        // Truncate and pad fields for alignment
-        var sensorName = PadField(data.SensorName, 20);
-        var location = PadField(data.SensorLocation, 16);
-        var temperature = $"{data.Temperature,5:0.00}°C";
-        var smoothed = $"{data.SmoothedValue,5:0.00}°C";
+        // Fixed column widths for perfect alignment
+        var sensorName = PadField(data.SensorName, 20);        // 20 chars
+        var location = PadField(data.SensorLocation, 16);      // 16 chars
+        var temperature = PadField($"{data.Temperature:0.00}°C", 11); // 11 chars (e.g., "  23.45°C")
+        var status = PadField(GetStatusDisplay(data), 8);      // 8 chars
+        var alertType = PadField(GetAlertTypeDisplay(data.AlertType), 11); // 11 chars
 
-        // Status with color coding
-        var status = GetStatusDisplay(data);
-        var alertType = GetAlertTypeDisplay(data.AlertType);
-        var quality = $"{data.QualityScore,3}%";
-        var notes = PadField(data.Notes ?? string.Empty, 20);
-
-        return $"{timestamp} | {sensorName} | {location} | {temperature} | {smoothed} | {status} | {alertType} | {quality} | {notes}";
+        return $"{timestamp} | {sensorName} | {location} | {temperature} | {status} | {alertType}";
     }
 
     private string FormatTabSeparatedEntry(SensorData data)
     {
-        // Format timestamp without milliseconds
-        var timestamp = data.Timestamp.ToString(_settings.TimestampFormat);
-
-        // Escape tabs and newlines in string fields
+        var timestamp = data.Timestamp.ToString("yyyy-MM-dd HH:mm:ss");
         var sensorName = EscapeField(data.SensorName);
         var location = EscapeField(data.SensorLocation);
-        var notes = EscapeField(data.Notes ?? string.Empty);
+        var status = GetStatusDisplay(data).Trim();
         var alertType = data.AlertType.ToString();
 
-        return $"{timestamp}\t{sensorName}\t{location}\t" +
-               $"{data.Temperature}\t{data.SmoothedValue}\t" +
-               $"{data.IsValid}\t{data.IsAnomaly}\t{data.IsSpike}\t{data.IsFaulty}\t" +
-               $"{alertType}\t{data.QualityScore}\t{notes}";
+        return $"{timestamp}\t{sensorName}\t{location}\t{data.Temperature:0.00}\t{status}\t{alertType}";
     }
 
-    private string PadField(string field, int length)
+    private static string PadField(string field, int length)
     {
         if (string.IsNullOrEmpty(field))
             return new string(' ', length);
@@ -173,13 +162,13 @@ public class FileLoggingService : IFileLoggingService, IDisposable
     {
         return alertType switch
         {
-            AlertType.None => "NONE     ",
-            AlertType.Threshold => "THRESHOLD",
-            AlertType.Anomaly => "ANOMALY  ",
-            AlertType.Spike => "SPIKE    ",
-            AlertType.Fault => "FAULT    ",
-            AlertType.Offline => "OFFLINE  ",
-            _ => "UNKNOWN  "
+            AlertType.None => "NORMAL    ",
+            AlertType.Threshold => "THRESHOLD  ",
+            AlertType.Anomaly => "ANOMALY    ",
+            AlertType.Spike => "SPIKE      ",
+            AlertType.Fault => "FAULT      ",
+            AlertType.Offline => "OFFLINE    ",
+            _ => "UNKNOWN    "
         };
     }
 
@@ -305,11 +294,10 @@ public class FileLoggingService : IFileLoggingService, IDisposable
                 return Task.FromResult(0);
 
             var lines = File.ReadAllLines(_currentLogFilePath);
-            // Subtract 1 for header and 1 for separator line if human readable format
             var subtractLines = _settings.IncludeHeader ? 1 : 0;
             if (_settings.UseHumanReadableFormat && _settings.IncludeHeader)
             {
-                subtractLines++; // Also subtract the separator line
+                subtractLines++;
             }
 
             var count = Math.Max(0, lines.Length - subtractLines);
