@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using ThermoTracker.ThermoTracker.Configurations;
+using ThermoTracker.ThermoTracker.Data;
 using ThermoTracker.ThermoTracker.Enums;
 using ThermoTracker.ThermoTracker.Models;
 using ThermoTracker.ThermoTracker.Services;
@@ -15,6 +17,7 @@ public class SensorServiceTests
     private readonly Mock<IOptions<TemperatureRangeSettings>> _mockFixedRangeOptions;
     private readonly TemperatureRangeSettings _fixedRangeSettings;
     private readonly SensorService _sensorService;
+
 
     public SensorServiceTests()
     {

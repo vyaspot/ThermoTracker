@@ -9,34 +9,57 @@ using ThermoTracker.ThermoTracker.Models;
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class DashboardService(
+public class DashboardService : IHostedService
+{
+    private readonly ISensorService _sensorService;
+    private readonly IDataService _dataService;
+    private readonly ILogger<DashboardService> _logger;
+    private Timer? _timer;
+    private List<Sensor> _sensors = [];
+    private readonly Dictionary<string, List<SensorData>> _dataHistory = [];
+    private readonly SimulationSettings _simulationSettings;
+    private readonly TemperatureRangeSettings _fixedRange;
+    private readonly FileLoggingSettings _fileLoggingSettings;
+    private readonly SensorDbContext _sensorDb;
+    private readonly object _lock = new();
+
+
+    public DashboardService(
     ISensorService sensorService,
     IDataService dataService,
+    SensorConfigWatcher configWatcher,
     IOptions<FileLoggingSettings> fileLoggingOptions,
     IOptions<SimulationSettings> simulationOptions,
     IOptions<TemperatureRangeSettings> fixedRangeOptions,
     SensorDbContext sensorDb,
-    ILogger<DashboardService> logger) : IHostedService
-{
-    private readonly ISensorService _sensorService = sensorService;
-    private readonly IDataService _dataService = dataService;
-    private readonly ILogger<DashboardService> _logger = logger;
-    private Timer? _timer;
-    private List<Sensor> _sensors = [];
-    private readonly Dictionary<string, List<SensorData>> _dataHistory = [];
-    private readonly SimulationSettings _simulationSettings = simulationOptions.Value;
-    private readonly TemperatureRangeSettings _fixedRange = fixedRangeOptions.Value;
-    private readonly FileLoggingSettings _fileLoggingSettings = fileLoggingOptions.Value;
-    private readonly SensorDbContext _sensorDb = sensorDb;
+    ILogger<DashboardService> logger)
+    {
+        _sensorService = sensorService;
+        _dataService = dataService;
+        _logger = logger;
+        _simulationSettings = simulationOptions.Value;
+        _fixedRange = fixedRangeOptions.Value;
+        _fileLoggingSettings = fileLoggingOptions.Value;
+        _sensorDb = sensorDb;
+
+        configWatcher.OnConfigChanged += configs =>
+        {
+            lock (_lock)
+            {
+                var cancellationToken = new CancellationToken();
+                _ = StartAsync(cancellationToken);
+                _logger.LogInformation("Sensor configurations updated. {Count} sensors loaded.", _sensors.Count);
+            }
+        };
+
+    }
 
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            _sensors = _sensorService.InitializeSensors();
-            await _sensorDb.Sensors.AddRangeAsync(_sensors);
-            await _sensorDb.SaveChangesAsync();
+            _sensors = _sensorService.GetSensors();
 
             foreach (var sensor in _sensors)
             {
@@ -61,13 +84,9 @@ public class DashboardService(
     {
         try
         {
-
-
             foreach (var sensor in _sensors)
             {
-
                 var data = _sensorService.SimulateData(sensor);
-
 
                 // Get recent data for smoothing and anomaly detection
                 var recentData = await _dataService.GetRecentDataAsync(sensor.Id, 10);
@@ -135,6 +154,8 @@ public class DashboardService(
 
         foreach (var sensor in _sensors)
         {
+            if (sensor.Status.Equals("Offline")) continue;
+
             var history = _dataHistory[sensor.Name];
             var latestData = history.LastOrDefault();
 

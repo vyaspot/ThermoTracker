@@ -28,3 +28,43 @@ sensors:
     noiseRange: 0.2
     faultProbability: 0.005
     spikeProbability: 0.003
+
+  - name: "Lab-Sensor1"
+    location: "Research Lab"
+    minValue: 20.0
+    maxValue: 26.0
+    normalMin: 22.0
+    normalMax: 24.0
+    noiseRange: 0.3
+    faultProbability: 0.01
+    spikeProbability: 0.005
+
+  # - name: "Warehouse-Sensor1"
+  #   location: "Warehouse"
+  #   minValue: 15.0
+  #   maxValue: 30.0
+  #   normalMin: 20.0
+  #   normalMax: 25.0
+  #   noiseRange: 0.4
+  #   faultProbability: 0.015
+  #   spikeProbability: 0.008
+
+  # - name: "Office-Sensor1"
+  #   location: "Office"
+  #   minValue: 22.0
+  #   maxValue: 28.0
+  #   normalMin: 24.0
+  #   normalMax: 26.0
+  #   noiseRange: 0.2
+  #   faultProbability: 0.005
+  #   spikeProbability: 0.003
+
+  # - name: "OT-Sensor1"
+  #   location: "OT"
+  #   minValue: 18.0
+  #   maxValue: 24.0
+  #   normalMin: 20.0
+  #   normalMax: 22.0
+  #   noiseRange: 0.3
+  #   faultProbability: 0.01
+  #   spikeProbability: 0.005

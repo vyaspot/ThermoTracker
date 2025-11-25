@@ -1,21 +1,123 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ThermoTracker.ThermoTracker.Configurations;
+using ThermoTracker.ThermoTracker.Data;
 using ThermoTracker.ThermoTracker.Enums;
+using ThermoTracker.ThermoTracker.Helpers;
 using ThermoTracker.ThermoTracker.Models;
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class SensorService(
-    ISensorValidatorService validator,
-    ILogger<SensorService> logger,
-    IOptions<TemperatureRangeSettings> fixedRangeOptions) : ISensorService
+public class SensorService : ISensorService
 {
     private readonly Random _random = new();
-    private readonly ISensorValidatorService _validatorService = validator;
-    private readonly ILogger<SensorService> _logger = logger;
-    private readonly TemperatureRangeSettings _fixedRange = fixedRangeOptions.Value;
-    
+    private readonly ISensorValidatorService _validatorService;
+    private readonly ILogger<SensorService> _logger;
+    private readonly TemperatureRangeSettings _fixedRange;
+    private readonly SensorDbContext _db;
+
+    private List<Sensor> _activeSensors = [];
+    private readonly object _lock = new();
+
+
+    public SensorService(
+        ISensorValidatorService validator,
+        ILogger<SensorService> logger,
+        SensorConfigWatcher configWatcher,
+        SensorDbContext db,
+        IOptions<TemperatureRangeSettings> fixedRangeOptions)
+    {
+        _validatorService = validator;
+        _logger = logger;
+        _fixedRange = fixedRangeOptions.Value;
+        _db = db;
+
+
+        configWatcher.OnConfigChanged += configs =>
+        {
+            lock (_lock)
+            {
+                _activeSensors = SyncSensorsWithDatabase(configs);
+                _logger.LogInformation("Sensor configurations updated. {Count} sensors loaded.", _activeSensors.Count);
+            }
+        };
+
+        // Initial load
+        var initialConfigs = YamlConfigurationHelper.LoadSensorConfigs("sensors.yml");
+        _activeSensors = SyncSensorsWithDatabase(initialConfigs);
+    }
+
+    private List<Sensor> SyncSensorsWithDatabase(List<SensorConfig> configs)
+    {
+        var current = _db.Sensors.ToList();
+
+        foreach (var cfg in configs)
+        {
+            var existing = current.FirstOrDefault(s => s.Name == cfg.Name);
+
+            if (existing == null)
+            {
+                var newSensor = new Sensor
+                {
+                    Name = cfg.Name,
+                    Location = cfg.Location,
+                    MinValue = cfg.MinValue,
+                    MaxValue = cfg.MaxValue,
+                    NormalMin = cfg.NormalMin,
+                    NormalMax = cfg.NormalMax,
+                    NoiseRange = cfg.NoiseRange,
+                    FaultProbability = cfg.FaultProbability,
+                    SpikeProbability = cfg.SpikeProbability,
+                    CreatedAt = DateTime.UtcNow,
+                    Status = "ACTIVE"
+                };
+
+                _db.Sensors.Add(newSensor);
+                _db.SaveChanges();
+
+                _ = Task.Delay(300);
+
+                current.Add(newSensor);
+
+                _logger.LogInformation("Added new sensor: {Name}", cfg.Name);
+            }
+            else
+            {
+                // Update config
+                existing.Location = cfg.Location;
+                existing.MinValue = cfg.MinValue;
+                existing.MaxValue = cfg.MaxValue;
+                existing.NormalMin = cfg.NormalMin;
+                existing.NormalMax = cfg.NormalMax;
+                existing.NoiseRange = cfg.NoiseRange;
+                existing.FaultProbability = cfg.FaultProbability;
+                existing.SpikeProbability = cfg.SpikeProbability;
+                existing.Status = "ACTIVE";
+                _logger.LogInformation("Updated sensor config: {Name}", cfg.Name);
+            }
+        }
+
+        // Optionally mark old sensors inactive
+        var names = configs.Select(c => c.Name).ToHashSet();
+        var removed = current.Where(s => !names.Contains(s.Name)).ToList();
+
+        foreach (var r in removed)
+        {
+            r.Status = "Offline";
+            _logger.LogWarning("Sensor removed from YAML: {Name}. Marked as faulty.", r.Name);
+        }
+
+        _db.SaveChanges();
+
+        return _db.Sensors.ToList();
+    }
+
+
+    public List<Sensor> GetSensors()
+    {
+        lock (_lock)
+            return _activeSensors.ToList();
+    }
 
     public List<Sensor> InitializeSensors()
     {
