@@ -62,6 +62,7 @@ public class SensorService : ISensorService
         _activeSensors = SyncSensorsWithDatabase(initialConfigs);
     }
 
+    // Live sensor list update
     private List<Sensor> SyncSensorsWithDatabase(List<SensorConfig> configs)
     {
         var current = _db.Sensors.ToList();
@@ -118,6 +119,7 @@ public class SensorService : ISensorService
 
         foreach (var r in removed)
         {
+            // we don't want to delete the sensor, just mark it as offline and remove from the live sensor list
             r.Status = "Offline";
             _logger.LogWarning("Sensor removed from YAML: {Name}. Marked as faulty.", r.Name);
         }
