@@ -3,13 +3,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using ThermoTracker.ThermoTracker.Configurations;
-using ThermoTracker.ThermoTracker.Data;
 using ThermoTracker.ThermoTracker.Enums;
 using ThermoTracker.ThermoTracker.Models;
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class DashboardService : IHostedService
+public class DashboardService : IHostedService, IDisposable
 {
     private readonly ISensorService _sensorService;
     private readonly IDataService _dataService;
@@ -20,19 +19,16 @@ public class DashboardService : IHostedService
     private readonly SimulationSettings _simulationSettings;
     private readonly TemperatureRangeSettings _fixedRange;
     private readonly FileLoggingSettings _fileLoggingSettings;
-    private readonly SensorDbContext _sensorDb;
     private readonly object _lock = new();
 
-
     public DashboardService(
-    ISensorService sensorService,
-    IDataService dataService,
-    SensorConfigWatcher configWatcher,
-    IOptions<FileLoggingSettings> fileLoggingOptions,
-    IOptions<SimulationSettings> simulationOptions,
-    IOptions<TemperatureRangeSettings> fixedRangeOptions,
-    SensorDbContext sensorDb,
-    ILogger<DashboardService> logger)
+        ISensorService sensorService,
+        IDataService dataService,
+        ISensorConfigWatcher configWatcher,
+        IOptions<FileLoggingSettings> fileLoggingOptions,
+        IOptions<SimulationSettings> simulationOptions,
+        IOptions<TemperatureRangeSettings> fixedRangeOptions,
+        ILogger<DashboardService> logger)
     {
         _sensorService = sensorService;
         _dataService = dataService;
@@ -40,7 +36,6 @@ public class DashboardService : IHostedService
         _simulationSettings = simulationOptions.Value;
         _fixedRange = fixedRangeOptions.Value;
         _fileLoggingSettings = fileLoggingOptions.Value;
-        _sensorDb = sensorDb;
 
         configWatcher.OnConfigChanged += configs =>
         {
@@ -51,19 +46,18 @@ public class DashboardService : IHostedService
                 _logger.LogInformation("Sensor configurations updated. {Count} sensors loaded.", _sensors.Count);
             }
         };
-
     }
-
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            _sensors = _sensorService.GetSensors();
+            _sensors = _sensorService.GetSensors() ?? new List<Sensor>();
 
             foreach (var sensor in _sensors)
             {
-                _dataHistory[sensor.Name] = new List<SensorData>();
+                if (!_dataHistory.ContainsKey(sensor.Name))
+                    _dataHistory[sensor.Name] = new List<SensorData>();
             }
 
             _timer = new Timer(UpdateDashboard, null, TimeSpan.Zero,
@@ -305,5 +299,10 @@ public class DashboardService : IHostedService
                 BorderStyle = new Style(Color.Red)
             };
         }
+    }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
     }
 }

@@ -20,10 +20,25 @@ public class SensorService : ISensorService
     private readonly object _lock = new();
 
 
+    // TESTING CONSTRUCTOR — DOES NOT LOAD YAML OR DATABASE
     public SensorService(
         ISensorValidatorService validator,
         ILogger<SensorService> logger,
-        SensorConfigWatcher configWatcher,
+        IOptions<TemperatureRangeSettings> fixedRangeOptions)
+    {
+        _validatorService = validator;
+        _logger = logger;
+        _fixedRange = fixedRangeOptions.Value;
+
+        // Provide safe defaults for unused services
+        _db = null!;
+        _activeSensors = new List<Sensor>();
+    }
+
+    public SensorService(
+        ISensorValidatorService validator,
+        ILogger<SensorService> logger,
+        ISensorConfigWatcher configWatcher,
         SensorDbContext db,
         IOptions<TemperatureRangeSettings> fixedRangeOptions)
     {

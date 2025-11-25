@@ -21,7 +21,7 @@ try
 
     // Services
     builder.Services.AddSingleton<ISensorValidatorService, SensorValidatorService>();
-    builder.Services.AddSingleton<SensorConfigWatcher>();
+    builder.Services.AddSingleton<ISensorConfigWatcher, SensorConfigWatcher>();
 
     builder.Services.AddScoped<IDataService, DataService>();
     builder.Services.AddScoped<ISensorService, SensorService>();

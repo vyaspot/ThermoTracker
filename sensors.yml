@@ -9,25 +9,25 @@ sensors:
     faultProbability: 0.01
     spikeProbability: 0.005
 
-  # - name: "ServerRoom-Sensor2"
-  #   location: "Server Room B"
-  #   minValue: 19.0
-  #   maxValue: 25.0
-  #   normalMin: 22.0
-  #   normalMax: 24.0
-  #   noiseRange: 0.4
-  #   faultProbability: 0.015
-  #   spikeProbability: 0.008
+  - name: "ServerRoom-Sensor2"
+    location: "Server Room B"
+    minValue: 19.0
+    maxValue: 25.0
+    normalMin: 22.0
+    normalMax: 24.0
+    noiseRange: 0.4
+    faultProbability: 0.015
+    spikeProbability: 0.008
 
-  # - name: "NetworkCloset-Sensor1"
-  #   location: "Network Closet"
-  #   minValue: 21.0
-  #   maxValue: 25.0
-  #   normalMin: 22.0
-  #   normalMax: 24.0
-  #   noiseRange: 0.2
-  #   faultProbability: 0.005
-  #   spikeProbability: 0.003
+  - name: "NetworkCloset-Sensor1"
+    location: "Network Closet"
+    minValue: 21.0
+    maxValue: 25.0
+    normalMin: 22.0
+    normalMax: 24.0
+    noiseRange: 0.2
+    faultProbability: 0.005
+    spikeProbability: 0.003
 
   - name: "Office-Sensor1"
     location: "Main Office"

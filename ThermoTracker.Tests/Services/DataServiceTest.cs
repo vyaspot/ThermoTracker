@@ -91,9 +91,9 @@ public class DataServiceTests
         using var context = new SensorDbContext(_dbContextOptions);
         var testData = new List<SensorData>
             {
-                new SensorData { Id = 1, SensorName = "TempSensor1", Temperature = 23.5M, Timestamp = DateTime.UtcNow.AddMinutes(-5) },
-                new SensorData { Id = 2, SensorName = "TempSensor1", Temperature = 23.6M, Timestamp = DateTime.UtcNow.AddMinutes(-10) },
-                new SensorData { Id = 3, SensorName = "OtherSensor", Temperature = 22.5M, Timestamp = DateTime.UtcNow.AddMinutes(-3) }
+                new() { Id = 1, SensorId = 1, SensorName = "TempSensor1", Temperature = 23.5M, Timestamp = DateTime.UtcNow.AddMinutes(-5) },
+                new() { Id = 2, SensorId = 1, SensorName = "TempSensor1", Temperature = 23.6M, Timestamp = DateTime.UtcNow.AddMinutes(-10) },
+                new() { Id = 3, SensorId = 2, SensorName = "OtherSensor", Temperature = 22.5M, Timestamp = DateTime.UtcNow.AddMinutes(-3) }
             };
 
         await context.SensorData.AddRangeAsync(testData);

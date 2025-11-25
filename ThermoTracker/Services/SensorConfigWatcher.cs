@@ -4,7 +4,7 @@ using ThermoTracker.ThermoTracker.Models;
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class SensorConfigWatcher : IDisposable
+public class SensorConfigWatcher : ISensorConfigWatcher, IDisposable
 {
     private readonly FileSystemWatcher _watcher;
     private readonly ILogger<SensorConfigWatcher> _logger;
@@ -12,7 +12,6 @@ public class SensorConfigWatcher : IDisposable
     private readonly string _filePath;
 
     public event Action<List<SensorConfig>>? OnConfigChanged;
-
 
     public SensorConfigWatcher(
         ILogger<SensorConfigWatcher> logger,
@@ -43,15 +42,13 @@ public class SensorConfigWatcher : IDisposable
 
     private void OnChanged(object sender, FileSystemEventArgs e)
     {
-        // Prevent duplicate events
-        Thread.Sleep(200);
+        Thread.Sleep(200); // prevent duplicate events
 
         try
         {
             _logger.LogInformation("Detected change in {File}. Reloading...", _filePath);
 
             var configs = YamlConfigurationHelper.LoadSensorConfigs(_filePath);
-
             OnConfigChanged?.Invoke(configs);
         }
         catch (Exception ex)
