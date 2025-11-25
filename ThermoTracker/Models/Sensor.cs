@@ -19,4 +19,6 @@ public class Sensor
     public int TotalReadings { get; set; }
     public int ErrorCount { get; set; }
     public decimal LastTemperature { get; set; }
+
+    public virtual ICollection<SensorData> SensorDataRecords { get; set; } = new List<SensorData>();
 }

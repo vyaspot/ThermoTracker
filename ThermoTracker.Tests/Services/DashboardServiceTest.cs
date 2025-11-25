@@ -1,3 +1,4 @@
+using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -233,7 +234,7 @@ public class DashboardServiceTests : IDisposable
         _sensorServiceMock.Setup(x => x.SimulateData(It.Is<Sensor>(s => s.Name == "Sensor2"))).Returns(sensorData2);
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(false);
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(recentData);
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(recentData);
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>())).Returns(Task.CompletedTask);
 
         var dashboardService = CreateDashboardService();
@@ -250,7 +251,7 @@ public class DashboardServiceTests : IDisposable
 
         // Assert
         _sensorServiceMock.Verify(x => x.SimulateData(It.IsAny<Sensor>()), Times.Exactly(2));
-        _dataServiceMock.Verify(x => x.GetRecentDataAsync(It.IsAny<string>(), 10), Times.Exactly(2));
+        _dataServiceMock.Verify(x => x.GetRecentDataAsync(It.IsAny<int>(), 10), Times.Exactly(2));
         _sensorServiceMock.Verify(x => x.SmoothData(It.IsAny<List<SensorData>>()), Times.Exactly(2));
         _sensorServiceMock.Verify(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>()), Times.Exactly(2));
         _dataServiceMock.Verify(x => x.StoreDataAsync(It.IsAny<SensorData>()), Times.Exactly(2));
@@ -270,7 +271,7 @@ public class DashboardServiceTests : IDisposable
         _sensorServiceMock.Setup(x => x.SimulateData(It.IsAny<Sensor>())).Returns(sensorData);
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(false);
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>()))
             .ThrowsAsync(new InvalidOperationException("Database error"));
 
@@ -460,7 +461,7 @@ public class DashboardServiceTests : IDisposable
         _sensorServiceMock.Setup(x => x.SimulateData(It.IsAny<Sensor>())).Returns(sensorData);
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(true); // Simulate anomaly
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(recentData);
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(recentData);
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>())).Returns(Task.CompletedTask);
 
         var dashboardService = CreateDashboardService();
@@ -502,7 +503,7 @@ public class DashboardServiceTests : IDisposable
 
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(false);
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>())).Returns(Task.CompletedTask);
 
         var dashboardService = CreateDashboardService();

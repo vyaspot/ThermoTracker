@@ -5,7 +5,7 @@ namespace ThermoTracker.ThermoTracker.Services;
 public interface IDataService
 {
     Task StoreDataAsync(SensorData data);
-    Task<List<SensorData>> GetRecentDataAsync(string sensorName, int count);
+    Task<List<SensorData>> GetRecentDataAsync(int sensorId, int count);
     Task LogDataAsync(SensorData data);
     Task<List<SensorData>> GetDataHistoryAsync(string sensorName, TimeSpan duration);
     Task<List<SensorData>> GetAnomaliesAsync(TimeSpan duration);

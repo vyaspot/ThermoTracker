@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
 using ThermoTracker.ThermoTracker.Configurations;
+using ThermoTracker.ThermoTracker.Data;
 using ThermoTracker.ThermoTracker.Enums;
 using ThermoTracker.ThermoTracker.Models;
 
@@ -14,6 +15,7 @@ public class DashboardService(
     IOptions<FileLoggingSettings> fileLoggingOptions,
     IOptions<SimulationSettings> simulationOptions,
     IOptions<TemperatureRangeSettings> fixedRangeOptions,
+    SensorDbContext sensorDb,
     ILogger<DashboardService> logger) : IHostedService
 {
     private readonly ISensorService _sensorService = sensorService;
@@ -25,13 +27,16 @@ public class DashboardService(
     private readonly SimulationSettings _simulationSettings = simulationOptions.Value;
     private readonly TemperatureRangeSettings _fixedRange = fixedRangeOptions.Value;
     private readonly FileLoggingSettings _fileLoggingSettings = fileLoggingOptions.Value;
+    private readonly SensorDbContext _sensorDb = sensorDb;
 
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
             _sensors = _sensorService.InitializeSensors();
+            await _sensorDb.Sensors.AddRangeAsync(_sensors);
+            await _sensorDb.SaveChangesAsync();
 
             foreach (var sensor in _sensors)
             {
@@ -50,20 +55,22 @@ public class DashboardService(
             _logger.LogError(ex, "Failed to start dashboard service");
             throw;
         }
-
-        return Task.CompletedTask;
     }
 
     private async void UpdateDashboard(object? state)
     {
         try
         {
+
+
             foreach (var sensor in _sensors)
             {
+
                 var data = _sensorService.SimulateData(sensor);
 
+
                 // Get recent data for smoothing and anomaly detection
-                var recentData = await _dataService.GetRecentDataAsync(sensor.Name, 10);
+                var recentData = await _dataService.GetRecentDataAsync(sensor.Id, 10);
                 data.SmoothedValue = _sensorService.SmoothData(recentData);
                 data.IsAnomaly = _sensorService.DetectAnomaly(data, recentData);
 

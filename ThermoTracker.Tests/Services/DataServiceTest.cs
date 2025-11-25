@@ -100,7 +100,7 @@ public class DataServiceTests
         await context.SaveChangesAsync();
 
         // Act
-        var result = await _dataService.GetRecentDataAsync("TempSensor1", 5);
+        var result = await _dataService.GetRecentDataAsync(1, 5);
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -111,7 +111,7 @@ public class DataServiceTests
     public async Task GetRecentDataAsync_WithNonExistentSensor_ReturnsEmptyList()
     {
         // Act
-        var result = await _dataService.GetRecentDataAsync("NonExistentSensor", 5);
+        var result = await _dataService.GetRecentDataAsync(5, 5);
 
         // Assert
         Assert.Empty(result);
@@ -128,6 +128,7 @@ public class DataServiceTests
         // Arrange
         var sensorData = new SensorData
         {
+            Id = 1,
             SensorName = "TempSensor1",
             SensorLocation = "Room1",
             Temperature = 23.5M,
@@ -183,9 +184,9 @@ public class DataServiceTests
         using var context = new SensorDbContext(_dbContextOptions);
         var testData = new List<SensorData>
             {
-                new SensorData { SensorName = "Sensor1", IsAnomaly = true, AlertType = AlertType.None },
-                new SensorData { SensorName = "Sensor2", IsAnomaly = false, AlertType = AlertType.Spike },
-                new SensorData { SensorName = "Sensor3", IsAnomaly = false, AlertType = AlertType.None }
+                new() { SensorName = "Sensor1", IsAnomaly = true, AlertType = AlertType.None },
+                new() { SensorName = "Sensor2", IsAnomaly = false, AlertType = AlertType.Spike },
+                new() { SensorName = "Sensor3", IsAnomaly = false, AlertType = AlertType.None }
             };
 
         await context.SensorData.AddRangeAsync(testData);
@@ -210,9 +211,9 @@ public class DataServiceTests
 
         var testData = new List<SensorData>
             {
-                new SensorData { SensorName = sensorName, Timestamp = start.AddMinutes(15) },
-                new SensorData { SensorName = sensorName, Timestamp = start.AddMinutes(45) },
-                new SensorData { SensorName = sensorName, Timestamp = end.AddMinutes(15) } // Outside range
+                new() { SensorName = sensorName, Timestamp = start.AddMinutes(15) },
+                new() { SensorName = sensorName, Timestamp = start.AddMinutes(45) },
+                new() { SensorName = sensorName, Timestamp = end.AddMinutes(15) } // Outside range
             };
 
         await context.SensorData.AddRangeAsync(testData);
@@ -236,8 +237,8 @@ public class DataServiceTests
 
         var testData = new List<SensorData>
             {
-                new SensorData { Timestamp = cutoffTime.AddDays(-1) },
-                new SensorData { Timestamp = cutoffTime.AddDays(1) }
+                new() { Timestamp = cutoffTime.AddDays(-1) },
+                new() { Timestamp = cutoffTime.AddDays(1) }
             };
 
         await context.SensorData.AddRangeAsync(testData);
@@ -259,10 +260,10 @@ public class DataServiceTests
 
         var testData = new List<SensorData>
             {
-                new SensorData { SensorName = sensorName, Temperature = 23.0M, IsValid = true, IsAnomaly = false, IsSpike = false, IsFaulty = false },
-                new SensorData { SensorName = sensorName, Temperature = 24.0M, IsValid = true, IsAnomaly = true, IsSpike = false, IsFaulty = false },
-                new SensorData { SensorName = sensorName, Temperature = 25.0M, IsValid = false, IsAnomaly = false, IsSpike = true, IsFaulty = false },
-                new SensorData { SensorName = sensorName, Temperature = 26.0M, IsValid = true, IsAnomaly = false, IsSpike = false, IsFaulty = true }
+                new() { SensorName = sensorName, Temperature = 23.0M, IsValid = true, IsAnomaly = false, IsSpike = false, IsFaulty = false },
+                new() { SensorName = sensorName, Temperature = 24.0M, IsValid = true, IsAnomaly = true, IsSpike = false, IsFaulty = false },
+                new() { SensorName = sensorName, Temperature = 25.0M, IsValid = false, IsAnomaly = false, IsSpike = true, IsFaulty = false },
+                new() { SensorName = sensorName, Temperature = 26.0M, IsValid = true, IsAnomaly = false, IsSpike = false, IsFaulty = true }
             };
 
         await context.SensorData.AddRangeAsync(testData);
@@ -288,10 +289,10 @@ public class DataServiceTests
         using var context = new SensorDbContext(_dbContextOptions);
         var testData = new List<SensorData>
             {
-                new SensorData { SensorName = "Sensor1", Temperature = 23.0M, IsAnomaly = true, IsSpike = false, IsFaulty = false },
-                new SensorData { SensorName = "Sensor1", Temperature = 24.0M, IsAnomaly = false, IsSpike = true, IsFaulty = false },
-                new SensorData { SensorName = "Sensor2", Temperature = 22.0M, IsAnomaly = false, IsSpike = false, IsFaulty = true },
-                new SensorData { SensorName = "Sensor3", Temperature = 21.0M, IsAnomaly = false, IsSpike = false, IsFaulty = false }
+                new() { SensorName = "Sensor1", Temperature = 23.0M, IsAnomaly = true, IsSpike = false, IsFaulty = false },
+                new() { SensorName = "Sensor1", Temperature = 24.0M, IsAnomaly = false, IsSpike = true, IsFaulty = false },
+                new() { SensorName = "Sensor2", Temperature = 22.0M, IsAnomaly = false, IsSpike = false, IsFaulty = true },
+                new() { SensorName = "Sensor3", Temperature = 21.0M, IsAnomaly = false, IsSpike = false, IsFaulty = false }
             };
 
         await context.SensorData.AddRangeAsync(testData);
@@ -315,24 +316,21 @@ public class DataServiceTests
         using var context = new SensorDbContext(_dbContextOptions);
         var testData = new List<SensorData>
             {
-                new SensorData
-                {
+                new() {
                     SensorName = "Sensor1",
                     SensorLocation = "Room1",
                     Temperature = 23.5M,
                     AlertType = AlertType.Spike,
                     Timestamp = DateTime.UtcNow.AddMinutes(-5)
                 },
-                new SensorData
-                {
+                new() {
                     SensorName = "Sensor2",
                     SensorLocation = "Room2",
                     Temperature = 45.0M,
                     AlertType = AlertType.Threshold,
                     Timestamp = DateTime.UtcNow.AddMinutes(-10)
                 },
-                new SensorData
-                {
+                new() {
                     SensorName = "Sensor3",
                     SensorLocation = "Room3",
                     Temperature = 22.5M,
@@ -358,9 +356,9 @@ public class DataServiceTests
         using var context = new SensorDbContext(_dbContextOptions);
         var testData = new List<SensorData>
             {
-                new SensorData { IsFaulty = true, IsSpike = false },
-                new SensorData { IsFaulty = false, IsSpike = true },
-                new SensorData { IsFaulty = false, IsSpike = false }
+                new() { IsFaulty = true, IsSpike = false },
+                new() { IsFaulty = false, IsSpike = true },
+                new() { IsFaulty = false, IsSpike = false }
             };
 
         await context.SensorData.AddRangeAsync(testData);

@@ -15,6 +15,7 @@ public class SensorService(
     private readonly ISensorValidatorService _validatorService = validator;
     private readonly ILogger<SensorService> _logger = logger;
     private readonly TemperatureRangeSettings _fixedRange = fixedRangeOptions.Value;
+    
 
     public List<Sensor> InitializeSensors()
     {
@@ -105,6 +106,7 @@ public class SensorService(
 
         var data = new SensorData
         {
+            SensorId = sensor.Id,
             SensorName = sensor.Name,
             SensorLocation = sensor.Location,
             Temperature = temperature,
