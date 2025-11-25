@@ -90,8 +90,8 @@ public class DashboardService(
         AnsiConsole.Clear();
 
         // Header
-        AnsiConsole.Write(new Rule("[yellow]🌡️ Temperature Sensor Dashboard[/]"));
-        AnsiConsole.MarkupLine($"[grey]Fixed Validation Range: {_fixedRange.Min}-{_fixedRange.Max}°C[/]");
+        AnsiConsole.Write(new Rule("[bold HotPink3]🌡️  Temperature Sensor Dashboard[/]"));
+        AnsiConsole.MarkupLine($"[bold indianRed]Fixed Validation Range: {_fixedRange.Min}-{_fixedRange.Max}°C[/]");
         AnsiConsole.WriteLine();
 
         // Sensor Table
@@ -117,14 +117,14 @@ public class DashboardService(
     {
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .BorderColor(Color.Grey)
-            .Title("[bold yellow]Live Sensor Data[/]")
-            .AddColumn(new TableColumn("[yellow]Sensor[/]").LeftAligned())
-            .AddColumn(new TableColumn("[yellow]Location[/]").LeftAligned())
-            .AddColumn(new TableColumn("[yellow]Temperature[/]").Centered())
-            .AddColumn(new TableColumn("[yellow]Status[/]").Centered())
-            .AddColumn(new TableColumn("[yellow]Smoothed[/]").Centered())
-            .AddColumn(new TableColumn("[yellow]Alerts[/]").Centered());
+            .BorderColor(Color.LightYellow3)
+            .Title("[bold gray]Live Sensor Data[/]")
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Sensor[/]").LeftAligned())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Location[/]").LeftAligned())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Temperature[/]").Centered())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Status[/]").Centered())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Smoothed[/]").Centered())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Alerts[/]").Centered());
 
         foreach (var sensor in _sensors)
         {
@@ -144,7 +144,7 @@ public class DashboardService(
             var alertText = latestData.AlertType switch
             {
                 AlertType.None => new Markup("[green]NORMAL[/]"),
-                AlertType.Threshold => new Markup("[yellow]THRESHOLD[/]"),
+                AlertType.Threshold => new Markup("[orange1]THRESHOLD[/]"),
                 AlertType.Anomaly => new Markup("[orange3]ANOMALY[/]"),
                 AlertType.Spike => new Markup("[darkorange]SPIKE[/]"),
                 AlertType.Fault => new Markup("[red]FAULT[/]"),
@@ -172,7 +172,7 @@ public class DashboardService(
             < 20 => "blue",
             < 22 => "cyan",
             >= 22 and <= 24 => "green",
-            > 24 and <= 26 => "yellow",
+            > 24 and <= 26 => "orange1",
             > 26 => "red"
         };
     }
@@ -197,7 +197,7 @@ public class DashboardService(
             new Markup($"[blue]Total: {totalReadings}[/]"),
             new Markup($"[green]Valid: {validReadings} ({validityRate:F1}%)[/]"),
             new Markup($"[red]Anomalies: {anomalyReadings}[/]"),
-            new Markup($"[yellow]Spikes: {spikeReadings}[/]")
+            new Markup($"[orange1]Spikes: {spikeReadings}[/]")
         );
 
         grid.AddRow(
@@ -209,9 +209,10 @@ public class DashboardService(
 
         return new Panel(grid)
         {
-            Header = new PanelHeader("📊 Statistics"),
+            Header = new PanelHeader("[bold gray]📊 Statistics [/]"),
+
             Border = BoxBorder.Rounded,
-            BorderStyle = new Style(Color.Grey)
+            BorderStyle = new Style(Color.HotPink3)
         };
     }
 
@@ -241,7 +242,7 @@ public class DashboardService(
             );
 
             grid.AddRow(
-                new Markup($"[yellow]Entries: {entryCount} records[/]"),
+                new Markup($"[IndianRed]Entries: {entryCount} records[/]"),
                 new Markup($"[grey]Total Files: {loggingInfo.TotalLogFiles}[/]")
             );
 
@@ -251,11 +252,11 @@ public class DashboardService(
             );
 
             var statusColor = entryCount > 0 ? Color.Green : Color.Red;
-            var statusText = entryCount > 0 ? "Logging Active" : "No Data Written";
+            var statusText = entryCount > 0 ? "ACTIVE" : "No Data Written";
 
             return new Panel(grid)
             {
-                Header = new PanelHeader($"[white]📁 File Logging Status: {statusText}[/]"),
+                Header = new PanelHeader($"[bold gray]📁 File Logging[/] "),
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(statusColor)
             };
