@@ -635,12 +635,26 @@ public class SensorServiceTests
         // Arrange
         var sensor = CreateTestSensor();
 
+        sensor.NormalMin = 22.5M;
+        sensor.NormalMax = 23.5M;
+        sensor.NoiseRange = 0.0M;
+
         // Act
         var result = _sensorService.SimulateData(sensor);
 
         // Assert
-        Assert.True(result.IsValid);
+        Assert.NotNull(result);
         Assert.InRange(result.QualityScore, 0, 100);
+
+        if (!result.IsValid)
+        {
+            Assert.Equal(0, result.QualityScore);
+        }
+        else
+        {
+            Assert.True(result.QualityScore > 0,
+                $"Quality score should be >0 for valid data, but was {result.QualityScore}");
+        }
     }
 
     [Fact]

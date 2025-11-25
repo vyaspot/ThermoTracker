@@ -13,6 +13,7 @@ This .NET console application simulates the behavior of temperature sensors with
 - **Data Storage**: Using SQLite database for data persistence
 - **Data Smoothing**: Moving average smoothing
 - **Alert System**: Threshold-based alerts
+- Add Live update the sensor yaml file
 
 ##
 
@@ -29,4 +30,5 @@ This .NET console application simulates the behavior of temperature sensors with
 - Git
 
 
-<!-- For the test report dotnet test --collect:"XPlat Code Coverage" --results-directory "."" -->
+<!-- For the test report dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=./TestResults/coverage.xml
+" -->
