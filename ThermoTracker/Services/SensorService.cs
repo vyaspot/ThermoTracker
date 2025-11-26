@@ -20,7 +20,7 @@ public class SensorService : ISensorService
     private readonly object _lock = new();
 
 
-    // TESTING CONSTRUCTOR — DOES NOT LOAD YAML OR DATABASE
+    // Testing Constructor
     public SensorService(
         ISensorValidatorService validator,
         ILogger<SensorService> logger,
@@ -30,7 +30,6 @@ public class SensorService : ISensorService
         _logger = logger;
         _fixedRange = fixedRangeOptions.Value;
 
-        // Provide safe defaults for unused services
         _db = null!;
         _activeSensors = new List<Sensor>();
     }
@@ -57,12 +56,10 @@ public class SensorService : ISensorService
             }
         };
 
-        // Initial load
         var initialConfigs = YamlConfigurationHelper.LoadSensorConfigs("sensors.yml");
         _activeSensors = SyncSensorsWithDatabase(initialConfigs);
     }
 
-    // Live sensor list update
     private List<Sensor> SyncSensorsWithDatabase(List<SensorConfig> configs)
     {
         var current = _db.Sensors.ToList();
@@ -85,7 +82,6 @@ public class SensorService : ISensorService
                     FaultProbability = cfg.FaultProbability,
                     SpikeProbability = cfg.SpikeProbability,
                     CreatedAt = DateTime.UtcNow,
-                    Status = "ACTIVE"
                 };
 
                 _db.Sensors.Add(newSensor);
@@ -99,7 +95,6 @@ public class SensorService : ISensorService
             }
             else
             {
-                // Update config
                 existing.Location = cfg.Location;
                 existing.MinValue = cfg.MinValue;
                 existing.MaxValue = cfg.MaxValue;
@@ -108,25 +103,23 @@ public class SensorService : ISensorService
                 existing.NoiseRange = cfg.NoiseRange;
                 existing.FaultProbability = cfg.FaultProbability;
                 existing.SpikeProbability = cfg.SpikeProbability;
-                existing.Status = "ACTIVE";
                 _logger.LogInformation("Updated sensor config: {Name}", cfg.Name);
+
+                _db.SaveChanges();
             }
         }
 
-        // Optionally mark old sensors inactive
         var names = configs.Select(c => c.Name).ToHashSet();
         var removed = current.Where(s => !names.Contains(s.Name)).ToList();
 
+        // Remove inactive sensors
         foreach (var r in removed)
         {
-            // we don't want to delete the sensor, just mark it as offline and remove from the live sensor list
-            r.Status = "Offline";
+            current.Remove(r);
             _logger.LogWarning("Sensor removed from YAML: {Name}. Marked as faulty.", r.Name);
         }
 
-        _db.SaveChanges();
-
-        return _db.Sensors.ToList();
+        return current; // Only currently active sensors
     }
 
 

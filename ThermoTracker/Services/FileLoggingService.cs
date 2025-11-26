@@ -219,20 +219,50 @@ public class FileLoggingService : IFileLoggingService, IDisposable
     {
         lock (_fileLock)
         {
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var rotatedFilePath = _currentLogFilePath.Replace(".txt", $"_{timestamp}.txt");
+            var rotatedFilePath = GetNextRotatedFilePath();
 
             if (File.Exists(_currentLogFilePath))
             {
                 File.Move(_currentLogFilePath, rotatedFilePath);
+                _logger.LogInformation("Log file rotated: {RotatedFile}", rotatedFilePath);
             }
 
+            // Start fresh with the base filename for the current date
             _currentLogFilePath = GetCurrentLogFilePath();
             InitializeLogFile();
-            _logger.LogInformation("Log file rotated: {NewFile}", rotatedFilePath);
+            _logger.LogInformation("New log file created: {NewFile}", _currentLogFilePath);
         }
 
         await CleanOldLogFilesAsync();
+    }
+
+    private string GetNextRotatedFilePath()
+    {
+        var baseFilePath = GetCurrentLogFilePath();
+        var directory = Path.GetDirectoryName(baseFilePath);
+        var baseFileName = Path.GetFileNameWithoutExtension(baseFilePath);
+        var extension = Path.GetExtension(baseFilePath);
+
+        // Find all existing rotated files for the current date
+        var pattern = $"{baseFileName}_*{extension}";
+        var existingFiles = Directory.GetFiles(directory!, pattern);
+
+        // Extract numbers from existing rotated files and find the highest one
+        var maxNumber = 0;
+        foreach (var file in existingFiles)
+        {
+            var fileName = Path.GetFileNameWithoutExtension(file);
+            var numberPart = fileName.Substring(baseFileName.Length + 1); // Remove base name and underscore
+
+            if (int.TryParse(numberPart, out int number) && number > maxNumber)
+            {
+                maxNumber = number;
+            }
+        }
+
+        // Use the next number
+        var nextNumber = maxNumber + 1;
+        return Path.Combine(directory!, $"{baseFileName}_{nextNumber}{extension}");
     }
 
     public string GetCurrentLogFilePath()
