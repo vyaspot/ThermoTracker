@@ -111,8 +111,8 @@ public class DashboardServiceTests : IDisposable
         // Arrange
         var sensors = new[]
         {
-                new Sensor { Id = 1, Name = "S1", Location = "R1", Status = "ACTIVE" },
-                new Sensor { Id = 2, Name = "S2", Location = "R2", Status = "ACTIVE" }
+                new Sensor { Id = 1, Name = "S1", Location = "R1" },
+                new Sensor { Id = 2, Name = "S2", Location = "R2" }
             };
         _sensorServiceMock.Setup(x => x.GetSensors()).Returns(sensors.ToList());
         var service = CreateService();
