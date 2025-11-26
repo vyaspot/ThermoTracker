@@ -5,6 +5,7 @@ namespace ThermoTracker.ThermoTracker.Services;
 public interface ISensorService
 {
     List<Sensor> InitializeSensors();
+    List<Sensor> GetSensors();
     SensorData SimulateData(Sensor sensor);
     bool ValidateData(SensorData data, Sensor sensor);
     decimal SmoothData(List<SensorData> dataHistory);

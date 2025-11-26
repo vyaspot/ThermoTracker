@@ -37,4 +37,9 @@ public class SensorData
     // Additional metadata
     public string? Notes { get; set; }
     public int QualityScore { get; set; } = 100;
+
+
+    // Foreign key relationship
+    public int SensorId { get; set; }
+    public virtual Sensor Sensor { get; set; } = default!;
 }

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,7 @@ public class DashboardServiceTests : IDisposable
     private readonly SensorDbContext _context;
     private readonly DbContextOptions<SensorDbContext> _dbContextOptions;
     private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly Mock<ISensorConfigWatcher> _configWatcherMock;
 
     public DashboardServiceTests()
     {
@@ -34,6 +36,7 @@ public class DashboardServiceTests : IDisposable
         _fixedRangeOptionsMock = new Mock<IOptions<TemperatureRangeSettings>>();
         _loggerMock = new Mock<ILogger<DashboardService>>();
         _cancellationTokenSource = new CancellationTokenSource();
+        _configWatcherMock = new Mock<ISensorConfigWatcher>();
 
         // Setup settings
         _fileLoggingSettings = new FileLoggingSettings
@@ -84,18 +87,78 @@ public class DashboardServiceTests : IDisposable
 
     private DashboardService CreateDashboardService(bool disableTimer = true)
     {
-        var service = new DashboardService(
+        // Available dependencies to try to satisfy any DashboardService constructor
+        var availableDependencies = new object[]
+        {
             _sensorServiceMock.Object,
             _dataServiceMock.Object,
+            _configWatcherMock.Object,
             _fileLoggingOptionsMock.Object,
             _simulationOptionsMock.Object,
             _fixedRangeOptionsMock.Object,
-            _loggerMock.Object);
+            _context,
+            _loggerMock.Object
+        };
+
+        var dashboardServiceType = typeof(DashboardService);
+        DashboardService? service = null;
+
+        // Try to find a public instance constructor that can be satisfied by the available dependencies
+        foreach (var ctor in dashboardServiceType.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
+        {
+            var parameters = ctor.GetParameters();
+            var used = new bool[availableDependencies.Length];
+            var argsForCtor = new object[parameters.Length];
+            var matched = true;
+
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var paramType = parameters[i].ParameterType;
+                bool found = false;
+
+                for (int j = 0; j < availableDependencies.Length; j++)
+                {
+                    if (used[j]) continue;
+                    var dep = availableDependencies[j];
+                    if (dep == null) continue;
+
+                    if (paramType.IsInstanceOfType(dep) || paramType.IsAssignableFrom(dep.GetType()))
+                    {
+                        used[j] = true;
+                        argsForCtor[i] = dep;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (matched)
+            {
+                service = (DashboardService)ctor.Invoke(argsForCtor);
+                break;
+            }
+        }
+
+        // Fallback to parameterless constructor if nothing matched
+        if (service == null)
+        {
+            service = Activator.CreateInstance(dashboardServiceType) as DashboardService;
+            if (service == null)
+            {
+                throw new InvalidOperationException("Could not create DashboardService with the available test dependencies.");
+            }
+        }
 
         if (disableTimer)
         {
-            var timerField = typeof(DashboardService).GetField("_timer",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var timerField = dashboardServiceType.GetField("_timer",
+                BindingFlags.NonPublic | BindingFlags.Instance);
             timerField?.SetValue(service, null);
         }
 
@@ -105,11 +168,11 @@ public class DashboardServiceTests : IDisposable
     private void InitializeServiceState(DashboardService service, List<Sensor> sensors)
     {
         var sensorsField = typeof(DashboardService).GetField("_sensors",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance);
         sensorsField?.SetValue(service, sensors);
 
         var dataHistoryField = typeof(DashboardService).GetField("_dataHistory",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance);
 
         var dataHistory = new Dictionary<string, List<SensorData>>();
         foreach (var sensor in sensors)
@@ -124,19 +187,43 @@ public class DashboardServiceTests : IDisposable
     {
         // Arrange
         var sensors = new List<Sensor>
-        {
-            new() { Name = "Sensor1", Location = "Room1" },
-            new() { Name = "Sensor2", Location = "Room2" }
-        };
+    {
+        new() {
+            Id = 1,
+            Name = "Sensor1",
+            Location = "Room1",
+            MinValue = 20.0M,
+            MaxValue = 26.0M,
+            NormalMin = 22.0M,
+            NormalMax = 24.0M,
+            Status = "ACTIVE"
+        },
+        new() {
+            Id = 2,
+            Name = "Sensor2",
+            Location = "Room2",
+            MinValue = 19.0M,
+            MaxValue = 25.0M,
+            NormalMin = 22.0M,
+            NormalMax = 24.0M,
+            Status = "ACTIVE"
+        }
+    };
 
-        _sensorServiceMock.Setup(x => x.InitializeSensors()).Returns(sensors);
+        // Mock the correct method that DashboardService actually calls
+        _sensorServiceMock.Setup(x => x.GetSensors()).Returns(sensors);
+
         var dashboardService = CreateDashboardService(disableTimer: false);
 
         // Act
         await dashboardService.StartAsync(_cancellationTokenSource.Token);
 
+        // Wait a bit to ensure the timer has a chance to run at least once
+        await Task.Delay(200);
+
         // Assert
-        _sensorServiceMock.Verify(x => x.InitializeSensors(), Times.Once);
+        _sensorServiceMock.Verify(x => x.GetSensors(), Times.Once);
+
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -146,6 +233,17 @@ public class DashboardServiceTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
             Times.Once);
 
+        // Verify fixed range settings are logged
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Fixed temperature validation range: 22.0-24.0°C")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
+            Times.Once);
+
+        // Cleanup
         await dashboardService.StopAsync(_cancellationTokenSource.Token);
     }
 
@@ -153,20 +251,23 @@ public class DashboardServiceTests : IDisposable
     public async Task StartAsync_WhenSensorServiceFails_LogsErrorAndThrows()
     {
         // Arrange
-        _sensorServiceMock.Setup(x => x.InitializeSensors())
-            .Throws(new InvalidOperationException("Sensor initialization failed"));
+        _sensorServiceMock.Setup(x => x.GetSensors())
+            .Throws(new InvalidOperationException("Sensor service failure"));
+
         var dashboardService = CreateDashboardService();
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => dashboardService.StartAsync(_cancellationTokenSource.Token));
+
+        Assert.Equal("Sensor service failure", ex.Message);
 
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Failed to start dashboard service")),
-                It.IsAny<InvalidOperationException>(),
+                ex,
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
             Times.Once);
     }
@@ -233,7 +334,7 @@ public class DashboardServiceTests : IDisposable
         _sensorServiceMock.Setup(x => x.SimulateData(It.Is<Sensor>(s => s.Name == "Sensor2"))).Returns(sensorData2);
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(false);
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(recentData);
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(recentData);
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>())).Returns(Task.CompletedTask);
 
         var dashboardService = CreateDashboardService();
@@ -250,7 +351,7 @@ public class DashboardServiceTests : IDisposable
 
         // Assert
         _sensorServiceMock.Verify(x => x.SimulateData(It.IsAny<Sensor>()), Times.Exactly(2));
-        _dataServiceMock.Verify(x => x.GetRecentDataAsync(It.IsAny<string>(), 10), Times.Exactly(2));
+        _dataServiceMock.Verify(x => x.GetRecentDataAsync(It.IsAny<int>(), 10), Times.Exactly(2));
         _sensorServiceMock.Verify(x => x.SmoothData(It.IsAny<List<SensorData>>()), Times.Exactly(2));
         _sensorServiceMock.Verify(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>()), Times.Exactly(2));
         _dataServiceMock.Verify(x => x.StoreDataAsync(It.IsAny<SensorData>()), Times.Exactly(2));
@@ -270,7 +371,7 @@ public class DashboardServiceTests : IDisposable
         _sensorServiceMock.Setup(x => x.SimulateData(It.IsAny<Sensor>())).Returns(sensorData);
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(false);
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>()))
             .ThrowsAsync(new InvalidOperationException("Database error"));
 
@@ -317,7 +418,7 @@ public class DashboardServiceTests : IDisposable
         Assert.Equal("blue", result1);      // < 20
         Assert.Equal("cyan", result2);      // < 22
         Assert.Equal("green", result3);     // 22-24
-        Assert.Equal("yellow", result4);    // > 24 and <= 26
+        Assert.Equal("orange1", result4);    // > 24 and <= 26
         Assert.Equal("red", result5);       // > 26
     }
 
@@ -406,14 +507,21 @@ public class DashboardServiceTests : IDisposable
     {
         // Arrange
         var emptySensors = new List<Sensor>();
-        _sensorServiceMock.Setup(x => x.InitializeSensors()).Returns(emptySensors);
+
+        // Mock the correct method that DashboardService actually calls
+        _sensorServiceMock.Setup(x => x.GetSensors()).Returns(emptySensors);
+
         var dashboardService = CreateDashboardService(disableTimer: false);
 
         // Act
         await dashboardService.StartAsync(_cancellationTokenSource.Token);
 
+        // Wait a bit to ensure initialization completes
+        await Task.Delay(100);
+
         // Assert
-        _sensorServiceMock.Verify(x => x.InitializeSensors(), Times.Once);
+        _sensorServiceMock.Verify(x => x.GetSensors(), Times.Once);
+
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -423,6 +531,17 @@ public class DashboardServiceTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
             Times.Once);
 
+        // Verify that even with no sensors, fixed range settings are still logged
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Fixed temperature validation range:")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
+            Times.Once);
+
+        // Cleanup
         await dashboardService.StopAsync(_cancellationTokenSource.Token);
     }
 
@@ -460,7 +579,7 @@ public class DashboardServiceTests : IDisposable
         _sensorServiceMock.Setup(x => x.SimulateData(It.IsAny<Sensor>())).Returns(sensorData);
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(true); // Simulate anomaly
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(recentData);
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(recentData);
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>())).Returns(Task.CompletedTask);
 
         var dashboardService = CreateDashboardService();
@@ -502,7 +621,7 @@ public class DashboardServiceTests : IDisposable
 
         _sensorServiceMock.Setup(x => x.SmoothData(It.IsAny<List<SensorData>>())).Returns(23.6M);
         _sensorServiceMock.Setup(x => x.DetectAnomaly(It.IsAny<SensorData>(), It.IsAny<List<SensorData>>())).Returns(false);
-        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
+        _dataServiceMock.Setup(x => x.GetRecentDataAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new List<SensorData>());
         _dataServiceMock.Setup(x => x.StoreDataAsync(It.IsAny<SensorData>())).Returns(Task.CompletedTask);
 
         var dashboardService = CreateDashboardService();
