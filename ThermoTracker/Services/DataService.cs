@@ -23,6 +23,8 @@ public class DataService(
 
     public async Task StoreDataAsync(SensorData data)
     {
+        if (data is null) throw new ArgumentNullException(nameof(data));
+
         try
         {
             data.Temperature = Math.Round(data.Temperature, 2);
@@ -30,6 +32,8 @@ public class DataService(
 
             _context.SensorData.Add(data);
             await _context.SaveChangesAsync();
+
+            if (_fileLoggingSettings.IncludeHeader) await _fileLoggingService.LogSensorReadingAsync(data);
 
             // Log to file system
             await _fileLoggingService.LogSensorReadingAsync(data);
