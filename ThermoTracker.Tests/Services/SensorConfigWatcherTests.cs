@@ -5,7 +5,7 @@ using ThermoTracker.ThermoTracker.Services;
 
 namespace ThermoTracker.ThermoTracker.Tests.Services;
 
-public class SensorConfigWatcherTest
+public class SensorConfigWatcherTests
 {
     [Fact]
     public void OnConfigChanged_IsRaised_WhenFileIsModified()
