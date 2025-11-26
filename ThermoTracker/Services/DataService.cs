@@ -27,8 +27,8 @@ public class DataService(
 
         try
         {
-            data.Temperature = Math.Round(data.Temperature, 2);
-            data.SmoothedValue = Math.Round(data.SmoothedValue, 2);
+            data!.Temperature = Math.Round(data.Temperature, 2);
+            data!.SmoothedValue = Math.Round(data.SmoothedValue, 2);
 
             _context.SensorData.Add(data);
             await _context.SaveChangesAsync();

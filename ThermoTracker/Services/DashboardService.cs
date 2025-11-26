@@ -148,8 +148,6 @@ public class DashboardService : IHostedService, IDisposable
 
         foreach (var sensor in _sensors)
         {
-            if (sensor.Status.Equals("Offline")) continue;
-
             var history = _dataHistory[sensor.Name];
             var latestData = history.LastOrDefault();
 
@@ -303,6 +301,5 @@ public class DashboardService : IHostedService, IDisposable
 
     public void Dispose()
     {
-        throw new NotImplementedException();
     }
 }
