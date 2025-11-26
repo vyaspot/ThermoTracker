@@ -8,34 +8,56 @@ using ThermoTracker.ThermoTracker.Models;
 
 namespace ThermoTracker.ThermoTracker.Services;
 
-public class DashboardService(
-    ISensorService sensorService,
-    IDataService dataService,
-    IOptions<FileLoggingSettings> fileLoggingOptions,
-    IOptions<SimulationSettings> simulationOptions,
-    IOptions<TemperatureRangeSettings> fixedRangeOptions,
-    ILogger<DashboardService> logger) : IHostedService
+public class DashboardService : IHostedService, IDisposable
 {
-    private readonly ISensorService _sensorService = sensorService;
-    private readonly IDataService _dataService = dataService;
-    private readonly ILogger<DashboardService> _logger = logger;
+    private readonly ISensorService _sensorService;
+    private readonly IDataService _dataService;
+    private readonly ILogger<DashboardService> _logger;
     private Timer? _timer;
     private List<Sensor> _sensors = [];
     private readonly Dictionary<string, List<SensorData>> _dataHistory = [];
-    private readonly SimulationSettings _simulationSettings = simulationOptions.Value;
-    private readonly TemperatureRangeSettings _fixedRange = fixedRangeOptions.Value;
-    private readonly FileLoggingSettings _fileLoggingSettings = fileLoggingOptions.Value;
+    private readonly SimulationSettings _simulationSettings;
+    private readonly TemperatureRangeSettings _fixedRange;
+    private readonly FileLoggingSettings _fileLoggingSettings;
+    private readonly object _lock = new();
 
+    public DashboardService(
+        ISensorService sensorService,
+        IDataService dataService,
+        ISensorConfigWatcher configWatcher,
+        IOptions<FileLoggingSettings> fileLoggingOptions,
+        IOptions<SimulationSettings> simulationOptions,
+        IOptions<TemperatureRangeSettings> fixedRangeOptions,
+        ILogger<DashboardService> logger)
+    {
+        _sensorService = sensorService;
+        _dataService = dataService;
+        _logger = logger;
+        _simulationSettings = simulationOptions.Value;
+        _fixedRange = fixedRangeOptions.Value;
+        _fileLoggingSettings = fileLoggingOptions.Value;
 
-    public Task StartAsync(CancellationToken cancellationToken)
+        configWatcher.OnConfigChanged += configs =>
+        {
+            lock (_lock)
+            {
+                var cancellationToken = new CancellationToken();
+                _ = StartAsync(cancellationToken);
+                _logger.LogInformation("Sensor configurations updated. {Count} sensors loaded.", _sensors.Count);
+            }
+        };
+    }
+
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            _sensors = _sensorService.InitializeSensors();
+            _sensors = _sensorService.GetSensors() ?? new List<Sensor>();
 
             foreach (var sensor in _sensors)
             {
-                _dataHistory[sensor.Name] = new List<SensorData>();
+                if (!_dataHistory.ContainsKey(sensor.Name))
+                    _dataHistory[sensor.Name] = new List<SensorData>();
             }
 
             _timer = new Timer(UpdateDashboard, null, TimeSpan.Zero,
@@ -50,8 +72,6 @@ public class DashboardService(
             _logger.LogError(ex, "Failed to start dashboard service");
             throw;
         }
-
-        return Task.CompletedTask;
     }
 
     private async void UpdateDashboard(object? state)
@@ -63,7 +83,7 @@ public class DashboardService(
                 var data = _sensorService.SimulateData(sensor);
 
                 // Get recent data for smoothing and anomaly detection
-                var recentData = await _dataService.GetRecentDataAsync(sensor.Name, 10);
+                var recentData = await _dataService.GetRecentDataAsync(sensor.Id, 10);
                 data.SmoothedValue = _sensorService.SmoothData(recentData);
                 data.IsAnomaly = _sensorService.DetectAnomaly(data, recentData);
 
@@ -90,8 +110,8 @@ public class DashboardService(
         AnsiConsole.Clear();
 
         // Header
-        AnsiConsole.Write(new Rule("[yellow]🌡️ Temperature Sensor Dashboard[/]"));
-        AnsiConsole.MarkupLine($"[grey]Fixed Validation Range: {_fixedRange.Min}-{_fixedRange.Max}°C[/]");
+        AnsiConsole.Write(new Rule("[bold HotPink3]🌡️  Temperature Sensor Dashboard[/]"));
+        AnsiConsole.MarkupLine($"[bold indianRed]Fixed Validation Range: {_fixedRange.Min}-{_fixedRange.Max}°C[/]");
         AnsiConsole.WriteLine();
 
         // Sensor Table
@@ -117,17 +137,19 @@ public class DashboardService(
     {
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .BorderColor(Color.Grey)
-            .Title("[bold yellow]Live Sensor Data[/]")
-            .AddColumn(new TableColumn("[yellow]Sensor[/]").LeftAligned())
-            .AddColumn(new TableColumn("[yellow]Location[/]").LeftAligned())
-            .AddColumn(new TableColumn("[yellow]Temperature[/]").Centered())
-            .AddColumn(new TableColumn("[yellow]Status[/]").Centered())
-            .AddColumn(new TableColumn("[yellow]Smoothed[/]").Centered())
-            .AddColumn(new TableColumn("[yellow]Alerts[/]").Centered());
+            .BorderColor(Color.LightYellow3)
+            .Title("[bold gray]Live Sensor Data[/]")
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Sensor[/]").LeftAligned())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Location[/]").LeftAligned())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Temperature[/]").Centered())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Status[/]").Centered())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Smoothed[/]").Centered())
+            .AddColumn(new TableColumn("[bold LightSlateGrey]Alerts[/]").Centered());
 
         foreach (var sensor in _sensors)
         {
+            if (sensor.Status.Equals("Offline")) continue;
+
             var history = _dataHistory[sensor.Name];
             var latestData = history.LastOrDefault();
 
@@ -144,7 +166,7 @@ public class DashboardService(
             var alertText = latestData.AlertType switch
             {
                 AlertType.None => new Markup("[green]NORMAL[/]"),
-                AlertType.Threshold => new Markup("[yellow]THRESHOLD[/]"),
+                AlertType.Threshold => new Markup("[orange1]THRESHOLD[/]"),
                 AlertType.Anomaly => new Markup("[orange3]ANOMALY[/]"),
                 AlertType.Spike => new Markup("[darkorange]SPIKE[/]"),
                 AlertType.Fault => new Markup("[red]FAULT[/]"),
@@ -172,7 +194,7 @@ public class DashboardService(
             < 20 => "blue",
             < 22 => "cyan",
             >= 22 and <= 24 => "green",
-            > 24 and <= 26 => "yellow",
+            > 24 and <= 26 => "orange1",
             > 26 => "red"
         };
     }
@@ -197,7 +219,7 @@ public class DashboardService(
             new Markup($"[blue]Total: {totalReadings}[/]"),
             new Markup($"[green]Valid: {validReadings} ({validityRate:F1}%)[/]"),
             new Markup($"[red]Anomalies: {anomalyReadings}[/]"),
-            new Markup($"[yellow]Spikes: {spikeReadings}[/]")
+            new Markup($"[orange1]Spikes: {spikeReadings}[/]")
         );
 
         grid.AddRow(
@@ -209,9 +231,10 @@ public class DashboardService(
 
         return new Panel(grid)
         {
-            Header = new PanelHeader("📊 Statistics"),
+            Header = new PanelHeader("[bold gray]📊 Statistics [/]"),
+
             Border = BoxBorder.Rounded,
-            BorderStyle = new Style(Color.Grey)
+            BorderStyle = new Style(Color.HotPink3)
         };
     }
 
@@ -241,7 +264,7 @@ public class DashboardService(
             );
 
             grid.AddRow(
-                new Markup($"[yellow]Entries: {entryCount} records[/]"),
+                new Markup($"[IndianRed]Entries: {entryCount} records[/]"),
                 new Markup($"[grey]Total Files: {loggingInfo.TotalLogFiles}[/]")
             );
 
@@ -251,11 +274,11 @@ public class DashboardService(
             );
 
             var statusColor = entryCount > 0 ? Color.Green : Color.Red;
-            var statusText = entryCount > 0 ? "Logging Active" : "No Data Written";
+            var statusText = entryCount > 0 ? "ACTIVE" : "No Data Written";
 
             return new Panel(grid)
             {
-                Header = new PanelHeader($"[white]📁 File Logging Status: {statusText}[/]"),
+                Header = new PanelHeader($"[bold gray]📁 File Logging[/] "),
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(statusColor)
             };
@@ -276,5 +299,10 @@ public class DashboardService(
                 BorderStyle = new Style(Color.Red)
             };
         }
+    }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
     }
 }

@@ -34,19 +34,19 @@ public class DataService(
             // Log to file system
             await _fileLoggingService.LogSensorReadingAsync(data);
 
-            _logger.LogDebug("Successfully stored and logged data for sensor {SensorName}", data.SensorName);
+            _logger.LogDebug("Successfully stored and logged data for sensor {SensorName}", data.SensorId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error storing sensor data for sensor {SensorName}", data.SensorName);
+            _logger.LogError(ex, "Error storing sensor data for sensor {SensorName}", data.SensorId);
             throw;
         }
     }
 
-    public async Task<List<SensorData>> GetRecentDataAsync(string sensorName, int count)
+    public async Task<List<SensorData>> GetRecentDataAsync(int sensorId, int count)
     {
         return await _context.SensorData
-            .Where(d => d.SensorName == sensorName)
+            .Where(d => d.SensorId == sensorId)
             .OrderByDescending(d => d.Timestamp)
             .Take(count)
             .ToListAsync();

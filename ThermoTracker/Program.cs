@@ -21,6 +21,8 @@ try
 
     // Services
     builder.Services.AddSingleton<ISensorValidatorService, SensorValidatorService>();
+    builder.Services.AddSingleton<ISensorConfigWatcher, SensorConfigWatcher>();
+
     builder.Services.AddScoped<IDataService, DataService>();
     builder.Services.AddScoped<ISensorService, SensorService>();
     builder.Services.AddScoped<IFileLoggingService, FileLoggingService>();
@@ -38,7 +40,6 @@ try
         options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
     });
 
-
     // Dashboard as hosted service
     builder.Services.AddHostedService<DashboardService>();
 
@@ -50,6 +51,7 @@ try
         configure.AddDebug();
         configure.AddConfiguration(builder.Configuration.GetSection("Logging"));
     });
+
 
     var host = builder.Build();
 
