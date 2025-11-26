@@ -1,4 +1,4 @@
-# TemperatureSensor
+# ThermoSensor App
 
 This .NET console application simulates the behavior of temperature sensors within a data center environment. A realistic model of sensor operations is provided through data generation, validation, storage, and anomaly detection, making it useful for learning, testing, or demonstration purposes.
 
@@ -9,9 +9,11 @@ This .NET console application simulates the behavior of temperature sensors with
 - **Fault Injection**: Simulates cooling failures, spikes, and complete sensor failures
 - **Data Validation**: Validates readings against configured ranges
 - **Anomaly Detection**: Statistical anomaly detection
-- **Data Storage**: SQLite database and in-memory storage
+- **Data Storage**: Using SQLite database for data persistence
+- **Data Storage**: Using SQLite database for data persistence
 - **Data Smoothing**: Moving average smoothing
 - **Alert System**: Threshold-based alerts
+- Add Live update the sensor yaml file
 
 ##
 
@@ -26,3 +28,6 @@ This .NET console application simulates the behavior of temperature sensors with
 ### Prerequisites
 - .NET 10.0 SDK
 - Git
+
+
+<!-- For the test report dotnet test --collect:"XPlat Code Coverage" -->
